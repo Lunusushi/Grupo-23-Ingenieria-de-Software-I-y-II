@@ -1,0 +1,51 @@
+# === ARCHIVOS GENERALES DEL SISTEMA ===
+*.log
+*.pyc
+__pycache__/
+.DS_Store
+.env
+.env.*  # Por si usas varios entornos
+.vscode/
+.idea/
+*.sqlite3
+
+# === BACKEND (Flask en Sistema/Backend) ===
+Sistema/Backend/__pycache__/
+Sistema/Backend/*.pyc
+Sistema/Backend/.pytest_cache/
+Sistema/Backend/.venv/
+Sistema/Backend/venv/
+Sistema/Backend/env/
+Sistema/Backend/*.egg-info/
+Sistema/Backend/.mypy_cache/
+Sistema/Backend/.coverage
+Sistema/Backend/coverage.xml
+Sistema/Backend/htmlcov/
+Sistema/Backend/.pylint.d/
+Sistema/Backend/.env
+
+# Virtual environments
+Sistema/Backend/venv/
+Sistema/Backend/env/
+
+# === FRONTEND (React en Sistema/Frontend) ===
+Sistema/Frontend/node_modules/
+Sistema/Frontend/build/
+Sistema/Frontend/.env
+Sistema/Frontend/.env.*.local
+Sistema/Frontend/npm-debug.log*
+Sistema/Frontend/yarn-debug.log*
+Sistema/Frontend/yarn-error.log*
+Sistema/Frontend/.eslintcache
+Sistema/Frontend/.parcel-cache/
+Sistema/Frontend/.turbo/
+Sistema/Frontend/dist/
+
+# === OS / EDITORES ===
+*.swp
+*.swo
+*.bak
+*.tmp
+*.orig
+Thumbs.db
+desktop.ini
