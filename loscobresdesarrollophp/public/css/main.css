@@ -1,0 +1,45 @@
+/* === Estilo general del sistema === */
+
+body {
+  background-color: #f8f9fa;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Navbar */
+.navbar {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Tarjetas */
+.card {
+  border-radius: 12px;
+}
+
+/* Botones */
+.btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* Inputs */
+.form-control,
+.form-select {
+  border-radius: 6px;
+}
+
+/* Tablas */
+.table th,
+.table td {
+  vertical-align: middle !important;
+  text-align: center;
+}
+
+/* Inputs numéricos */
+input[type="number"] {
+  max-width: 80px;
+}
+
+/* Alertas */
+.alert {
+  border-radius: 6px;
+}
