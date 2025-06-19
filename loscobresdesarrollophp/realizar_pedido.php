@@ -1,14 +1,16 @@
 <?php
+session_start();
+if (!isset($_SESSION["usuario_id"])) {
+    header("Location: login.php");
+    exit();
+}
+
 require_once 'config/db.php';
 require_once 'controllers/PedidoController.php';
 require_once 'controllers/CarritoController.php';
 require_once 'partials/navbar.php';
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-$id_cliente = $_SESSION["usuario_id"] ?? 1;
+$id_cliente = $_SESSION["usuario_id"];
 
 $carrito = CarritoController::obtenerCarrito($conn, $id_cliente);
 $id_carrito = $carrito["id_carrito"];

@@ -1,4 +1,11 @@
 <?php
+session_start();
+if (!isset($_SESSION["usuario_id"])) {
+    header("Location: login.php");
+    exit();
+}
+
+require_once 'config/db.php';
 require_once 'controllers/FavoritosController.php';
 
 $id_cliente = $_SESSION["usuario_id"];
