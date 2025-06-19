@@ -1,7 +1,4 @@
 <?php
-header("Location: catalogo.php");
-exit;
-
 require_once 'config/db.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
