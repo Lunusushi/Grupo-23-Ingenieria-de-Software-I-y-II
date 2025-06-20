@@ -41,15 +41,8 @@ class UserController {
     }
 
     public static function revocarCargo($conn, $id_usuario, $cargo) {
-        $stmt = $conn->prepare("SELECT cargo FROM OPERADOR WHERE id_usuario = ?");
-        $stmt->execute([$id_usuario]);
-        $currentCargo = $stmt->fetchColumn();
-
-        if ($currentCargo === $cargo) {
-            // Remove operador entry
-            self::revocarOperador($conn, $id_usuario);
-        }
-        // If multiple cargos per user are supported, implement logic here to remove specific cargo only
+        $stmt = $conn->prepare("DELETE FROM OPERADOR WHERE id_usuario = ? AND cargo = ?");
+        $stmt->execute([$id_usuario, $cargo]);
     }
 }
 ?>
