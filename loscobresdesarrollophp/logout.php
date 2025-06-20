@@ -1,8 +1,8 @@
 <?php
-session_start();
-session_unset();     // Limpia variables de sesión
-session_destroy();   // Destruye la sesión actual
+require_once 'controllers/AuthenticationController.php';
 
-// Redirigir al login
+AuthenticationController::logout();
+
 header("Location: login.php");
 exit;
+?>

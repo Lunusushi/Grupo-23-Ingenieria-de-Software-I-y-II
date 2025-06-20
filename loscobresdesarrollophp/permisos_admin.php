@@ -1,5 +1,5 @@
 <?php
-require_once 'config/db.php';
+require_once 'config/MySqlDb.php';
 require_once 'controllers/UserController.php';
 require_once 'partials/navbar.php';
 

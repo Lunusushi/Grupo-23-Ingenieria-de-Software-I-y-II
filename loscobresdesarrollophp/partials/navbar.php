@@ -37,8 +37,11 @@ if (session_status() === PHP_SESSION_NONE) {
       </ul>
 
       <ul class="navbar-nav">
-        <?php if (isset($_SESSION["usuario_id"])): ?>
-          <li class="nav-item"><a class="nav-link text-danger" href="logout.php">Cerrar sesión</a></li>
+        <?php if (isset($_SESSION["user"])): ?>
+          <li class="nav-item d-flex align-items-center">
+            <span class="me-3">Hola, <?= htmlspecialchars($_SESSION['user']['name']) ?></span>
+            <a class="nav-link text-danger" href="logout.php">Cerrar sesión</a>
+          </li>
         <?php else: ?>
           <li class="nav-item"><a class="nav-link" href="login.php">Iniciar sesión</a></li>
           <li class="nav-item"><a class="nav-link" href="register.php">Registrarse</a></li>

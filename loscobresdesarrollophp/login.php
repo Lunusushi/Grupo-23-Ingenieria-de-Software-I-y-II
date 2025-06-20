@@ -1,6 +1,7 @@
 <?php
 
-require_once 'config/db.php';
+require_once 'controllers/AuthenticationController.php';
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -13,62 +14,50 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $user_type = $_POST["user_type"] ?? 'cliente';
 
     // Prevent re-login if already logged in
-    if (isset($_SESSION["usuario_id"])) {
+    if (isset($_SESSION["user"])) {
         header("Location: catalogo.php");
         exit;
     }
 
-$stmt = $conn->prepare("SELECT * FROM USUARIO WHERE email = ?");
-$stmt->execute([$email]);
-$usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+    $loginSuccess = AuthenticationController::login($email, $password, $user_type);
 
-if ($usuario && password_verify($password, $usuario["password_hash"])) {
-    if ($user_type === 'operador') {
-        $stmt2 = $conn->prepare("SELECT * FROM OPERADOR WHERE id_usuario = ?");
-        $stmt2->execute([$usuario["id_usuario"]]);
-        $operador = $stmt2->fetch(PDO::FETCH_ASSOC);
+    if ($loginSuccess) {
+        $user = AuthenticationController::getCurrentUser();
 
-            if ($operador) {
-                $_SESSION["usuario_id"] = $usuario["id_usuario"];
-                $_SESSION["usuario_nombre"] = $usuario["nombre"];
-                $_SESSION["user_type"] = 'operador';
-                $_SESSION["cargo"] = $operador["cargo"];
-                $_SESSION["id_operador"] = $operador["id_operador"];
+        if ($user['type'] === 'operador') {
+            $_SESSION["user_type"] = 'operador';
+            $_SESSION["cargo"] = $user['cargo'];
+            $_SESSION["id_operador"] = $user['id'];
 
-                // Redirect based on cargo
-                switch ($operador["cargo"]) {
-                    case 'administrador':
-                        header("Location: admin_index.php");
-                        break;
-                    case 'mantenedor':
-                        header("Location: permisos_admin.php");
-                        break;
-                    case 'catalogo':
-                        header("Location: productos_admin.php");
-                        break;
-                    case 'caja':
-                        header("Location: verificar_pedidos.php");
-                        break;
-                    default:
-                        header("Location: admin_index.php");
-                        break;
-                }
-                exit;
-            } else {
-                $mensaje = "❌ No tienes permisos de operador.";
+            // Redirect based on cargo
+            switch ($user['cargo']) {
+                case 'administrador':
+                    header("Location: admin_index.php");
+                    break;
+                case 'mantenedor':
+                    header("Location: permisos_admin.php");
+                    break;
+                case 'catalogo':
+                    header("Location: productos_admin.php");
+                    break;
+                case 'caja':
+                    header("Location: verificar_pedido.php");
+                    break;
+                default:
+                    header("Location: admin_index.php");
+                    break;
             }
-    } elseif ($user_type === 'cliente') {
-        $_SESSION["usuario_id"] = $usuario["id_usuario"];
-        $_SESSION["usuario_nombre"] = $usuario["nombre"];
-        $_SESSION["user_type"] = 'cliente';
-        header("Location: catalogo.php");
-        exit;
+            exit;
+        } elseif ($user['type'] === 'cliente') {
+            $_SESSION["user_type"] = 'cliente';
+            header("Location: catalogo.php");
+            exit;
+        } else {
+            $mensaje = "❌ Tipo de usuario no válido.";
+        }
     } else {
-        $mensaje = "❌ Tipo de usuario no válido.";
+        $mensaje = "❌ Credenciales incorrectas.";
     }
-} else {
-    $mensaje = "❌ Credenciales incorrectas.";
-}
 }
 ?>
 

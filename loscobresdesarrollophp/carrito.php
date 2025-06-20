@@ -5,7 +5,7 @@ if (!isset($_SESSION["usuario_id"])) {
     exit();
 }
 
-require_once 'config/db.php';
+require_once 'config/MySqlDb.php';
 require_once 'controllers/ClientController.php';
 require_once 'partials/navbar.php';
 
