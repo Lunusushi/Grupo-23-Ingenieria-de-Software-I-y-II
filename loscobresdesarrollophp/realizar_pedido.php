@@ -1,6 +1,6 @@
 <?php
 session_start();
-if (!isset($_SESSION["usuario_id"])) {
+if (!isset($_SESSION['user']['id'])) {
     header("Location: login.php");
     exit();
 }
@@ -9,7 +9,7 @@ require_once 'config/MySqlDb.php';
 require_once 'controllers/ClientController.php';
 require_once 'partials/navbar.php';
 
-$id_cliente = $_SESSION["usuario_id"];
+$id_cliente = $_SESSION['user']['id'];
 
 $carrito = ClientController::obtenerCarrito($conn, $id_cliente);
 $id_carrito = $carrito["id_carrito"];
@@ -20,7 +20,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $metodo = $_POST["metodo_pago"];
     $lugar = $_POST["lugar_retiro"];
     $codigo = ClientController::realizarPedido($conn, $id_cliente, $id_carrito, $metodo, $lugar);
-    $mensaje = "✅ Pedido registrado. Código de retiro: <strong>$codigo</strong>";
+    $mensaje = "✅ Pedido registrado. Código de retiro: <strong>" . htmlspecialchars($codigo) . "</strong>";
 }
 ?>
 
@@ -33,8 +33,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   <link href="public/css/main.css" rel="stylesheet">
 </head>
 <body>
-
-
 
 <div class="container">
   <h2 class="mb-4">📦 Finalizar Pedido</h2>

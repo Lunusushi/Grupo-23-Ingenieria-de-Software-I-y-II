@@ -141,7 +141,7 @@ class ClientController {
             throw new Exception("Operadores no pueden realizar pedidos.");
         }
 
-        $id_operador = 1;
+        $id_operador = 18;
 
         $stmt = $conn->prepare("INSERT INTO PEDIDO (id_cliente, id_carrito, metodo_pago, lugar_retiro, estado, codigo_verificacion, id_operador, id_op_registro, id_op_entrega)
                                 VALUES (?, ?, ?, ?, 'pendiente', ?, ?, ?, ?)");

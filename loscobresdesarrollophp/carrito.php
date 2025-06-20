@@ -1,6 +1,6 @@
 <?php
 session_start();
-if (!isset($_SESSION["usuario_id"])) {
+if (!isset($_SESSION['user']['id'])) {
     header("Location: login.php");
     exit();
 }
@@ -9,7 +9,8 @@ require_once 'config/MySqlDb.php';
 require_once 'controllers/ClientController.php';
 require_once 'partials/navbar.php';
 
-$id_cliente = $_SESSION["usuario_id"];
+$id_cliente = $_SESSION['user']['id'];
+
 $carrito = ClientController::obtenerCarrito($conn, $id_cliente);
 $id_carrito = $carrito["id_carrito"];
 
@@ -57,9 +58,9 @@ $total = 0;
               $total += $subtotal;
             ?>
             <tr>
-              <td><img src="<?= $item["url_imagen_principal"] ?>" width="80"></td>
-              <td><?= $item["nombre_producto"] ?></td>
-              <td><?= $item["cantidad"] ?></td>
+              <td><img src="<?= htmlspecialchars($item["url_imagen_principal"]) ?>" width="80"></td>
+              <td><?= htmlspecialchars($item["nombre_producto"]) ?></td>
+              <td><?= (int)$item["cantidad"] ?></td>
               <td>$<?= number_format($item["precio_unitario_momento"], 0, ',', '.') ?></td>
               <td><strong>$<?= number_format($subtotal, 0, ',', '.') ?></strong></td>
             </tr>
