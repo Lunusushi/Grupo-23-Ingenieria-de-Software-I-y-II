@@ -43,3 +43,9 @@ input[type="number"] {
 .alert {
   border-radius: 6px;
 }
+
+/* Carrusel */
+#carruselReligioso img {
+  max-height: 400px;
+  object-fit: cover;
+}
