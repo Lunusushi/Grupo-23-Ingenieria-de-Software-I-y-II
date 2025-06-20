@@ -6,13 +6,12 @@ if (!isset($_SESSION["usuario_id"])) {
 }
 
 require_once 'config/db.php';
-require_once 'controllers/PedidoController.php';
-require_once 'controllers/CarritoController.php';
+require_once 'controllers/ClientController.php';
 require_once 'partials/navbar.php';
 
 $id_cliente = $_SESSION["usuario_id"];
 
-$carrito = CarritoController::obtenerCarrito($conn, $id_cliente);
+$carrito = ClientController::obtenerCarrito($conn, $id_cliente);
 $id_carrito = $carrito["id_carrito"];
 
 $mensaje = "";
@@ -20,7 +19,7 @@ $mensaje = "";
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $metodo = $_POST["metodo_pago"];
     $lugar = $_POST["lugar_retiro"];
-    $codigo = PedidoController::realizarPedido($conn, $id_cliente, $id_carrito, $metodo, $lugar);
+    $codigo = ClientController::realizarPedido($conn, $id_cliente, $id_carrito, $metodo, $lugar);
     $mensaje = "✅ Pedido registrado. Código de retiro: <strong>$codigo</strong>";
 }
 ?>

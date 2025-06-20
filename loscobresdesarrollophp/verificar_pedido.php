@@ -1,15 +1,15 @@
 <?php
-require_once 'controllers/PedidoController.php';
+require_once 'controllers/ClientController.php';
 
 $pedido = null;
 $detalles = [];
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $codigo = $_POST["codigo"];
-    $pedido = PedidoController::buscarPedidoPorCodigo($conn, $codigo);
+    $pedido = ClientController::buscarPedidoPorCodigo($conn, $codigo);
 
     if ($pedido) {
-        $detalles = PedidoController::detallesPedido($conn, $pedido["id_pedido"]);
+        $detalles = ClientController::detallesPedido($conn, $pedido["id_pedido"]);
     } else {
         echo "<p>❌ Pedido no encontrado.</p>";
     }

@@ -1,14 +1,14 @@
 <?php
 require_once 'config/db.php';
-require_once 'controllers/PermisoController.php';
+require_once 'controllers/UserController.php';
 require_once 'partials/navbar.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$usuarios = PermisoController::obtenerUsuarios($conn);
-$operadores = PermisoController::obtenerOperadores($conn);
+$usuarios = UserController::obtenerUsuarios($conn);
+$operadores = UserController::obtenerOperadores($conn);
 $mensaje = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -26,7 +26,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Permission check
         if ($currentUserCargo === 'administrador' || 
             ($currentUserCargo === 'mantenedor' && in_array($cargo, ['catalogo', 'caja']))) {
-            PermisoController::asignarOperador($conn, $id_usuario, $cargo);
+UserController::asignarOperador($conn, $id_usuario, $cargo);
             $mensaje = "✅ Permiso asignado correctamente.";
         } else {
             $mensaje = "❌ No tienes permiso para asignar este cargo.";
@@ -34,13 +34,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif ($action === "revocar" && $cargo) {
         if ($currentUserCargo === 'administrador' || 
             ($currentUserCargo === 'mantenedor' && in_array($cargo, ['catalogo', 'caja']))) {
-            PermisoController::revocarCargo($conn, $id_usuario, $cargo);
+UserController::revocarCargo($conn, $id_usuario, $cargo);
             $mensaje = "🗑️ Permiso revocado correctamente.";
         } else {
             $mensaje = "❌ No tienes permiso para revocar este cargo.";
         }
     }
-    $operadores = PermisoController::obtenerOperadores($conn);
+    $operadores = UserController::obtenerOperadores($conn);
 }
 ?>
 

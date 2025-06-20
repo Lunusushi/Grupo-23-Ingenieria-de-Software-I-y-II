@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
 
-class PermisoController {
+class UserController {
     public static function obtenerUsuarios($conn) {
         $stmt = $conn->query("SELECT * FROM USUARIO");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

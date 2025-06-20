@@ -6,20 +6,20 @@ if (!isset($_SESSION["usuario_id"])) {
 }
 
 require_once 'config/db.php';
-require_once 'controllers/CarritoController.php';
+require_once 'controllers/ClientController.php';
 require_once 'partials/navbar.php';
 
 $id_cliente = $_SESSION["usuario_id"];
-$carrito = CarritoController::obtenerCarrito($conn, $id_cliente);
+$carrito = ClientController::obtenerCarrito($conn, $id_cliente);
 $id_carrito = $carrito["id_carrito"];
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $id_producto = $_POST["id_producto"];
     $cantidad = $_POST["cantidad"];
-    CarritoController::agregarProducto($conn, $id_carrito, $id_producto, $cantidad);
+    ClientController::agregarProducto($conn, $id_carrito, $id_producto, $cantidad);
 }
 
-$items = CarritoController::obtenerItems($conn, $id_carrito);
+$items = ClientController::obtenerItems($conn, $id_carrito);
 $total = 0;
 ?>
 
@@ -32,7 +32,6 @@ $total = 0;
   <link href="public/css/main.css" rel="stylesheet">
 </head>
 <body>
-
 
 <div class="container">
   <h2 class="mb-4">🛒 Mi Carrito de Compras</h2>

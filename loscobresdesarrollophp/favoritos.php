@@ -6,20 +6,20 @@ if (!isset($_SESSION["usuario_id"])) {
 }
 
 require_once 'config/db.php';
-require_once 'controllers/FavoritosController.php';
+require_once 'controllers/ClientController.php';
 
 $id_cliente = $_SESSION["usuario_id"];
-$lista = FavoritosController::obtenerLista($conn, $id_cliente);
+$lista = ClientController::obtenerLista($conn, $id_cliente);
 $id_lista = $lista["id_lista"];
 
 // Agregar producto
 $mensaje = "";
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $id_producto = $_POST["id_producto"];
-    $mensaje = FavoritosController::agregarFavorito($conn, $id_lista, $id_producto);
+    $mensaje = ClientController::agregarFavorito($conn, $id_lista, $id_producto);
 }
 
-$favoritos = FavoritosController::obtenerFavoritos($conn, $id_lista);
+$favoritos = ClientController::obtenerFavoritos($conn, $id_lista);
 ?>
 
 <h2>⭐ Mis Favoritos</h2>
