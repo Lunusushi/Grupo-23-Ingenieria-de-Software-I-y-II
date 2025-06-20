@@ -17,7 +17,7 @@ if (session_status() === PHP_SESSION_NONE) {
         <li class="nav-item"><a class="nav-link" href="favoritos.php">Favoritos</a></li>
         <li class="nav-item"><a class="nav-link" href="realizar_pedido.php">Pedido</a></li>
 
-        <?php if (isset($_SESSION["user_type"]) && $_SESSION["user_type"] === 'operador'): ?>
+        <?php if (isset($_SESSION["user_type"]) && $_SESSION["user_type"] === 'operador' && isset($_SESSION["id_operador"])): ?>
           <?php if ($_SESSION["cargo"] === 'administrador'): ?>
             <li class="nav-item"><a class="nav-link" href="verificar_pedido.php">Verificar Pedido</a></li>
             <li class="nav-item"><a class="nav-link" href="productos_admin.php">Admin Productos</a></li>

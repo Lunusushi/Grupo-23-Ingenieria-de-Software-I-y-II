@@ -28,34 +28,35 @@ if ($usuario && password_verify($password, $usuario["password_hash"])) {
         $stmt2->execute([$usuario["id_usuario"]]);
         $operador = $stmt2->fetch(PDO::FETCH_ASSOC);
 
-        if ($operador) {
-            $_SESSION["usuario_id"] = $usuario["id_usuario"];
-            $_SESSION["usuario_nombre"] = $usuario["nombre"];
-            $_SESSION["user_type"] = 'operador';
-            $_SESSION["cargo"] = $operador["cargo"];
+            if ($operador) {
+                $_SESSION["usuario_id"] = $usuario["id_usuario"];
+                $_SESSION["usuario_nombre"] = $usuario["nombre"];
+                $_SESSION["user_type"] = 'operador';
+                $_SESSION["cargo"] = $operador["cargo"];
+                $_SESSION["id_operador"] = $operador["id_operador"];
 
-            // Redirect based on cargo
-            switch ($operador["cargo"]) {
-                case 'administrador':
-                    header("Location: admin_index.php");
-                    break;
-                case 'mantenedor':
-                    header("Location: permisos_admin.php");
-                    break;
-                case 'catalogo':
-                    header("Location: productos_admin.php");
-                    break;
-                case 'caja':
-                    header("Location: verificar_pedidos.php");
-                    break;
-                default:
-                    header("Location: admin_index.php");
-                    break;
+                // Redirect based on cargo
+                switch ($operador["cargo"]) {
+                    case 'administrador':
+                        header("Location: admin_index.php");
+                        break;
+                    case 'mantenedor':
+                        header("Location: permisos_admin.php");
+                        break;
+                    case 'catalogo':
+                        header("Location: productos_admin.php");
+                        break;
+                    case 'caja':
+                        header("Location: verificar_pedidos.php");
+                        break;
+                    default:
+                        header("Location: admin_index.php");
+                        break;
+                }
+                exit;
+            } else {
+                $mensaje = "❌ No tienes permisos de operador.";
             }
-            exit;
-        } else {
-            $mensaje = "❌ No tienes permisos de operador.";
-        }
     } elseif ($user_type === 'cliente') {
         $_SESSION["usuario_id"] = $usuario["id_usuario"];
         $_SESSION["usuario_nombre"] = $usuario["nombre"];
