@@ -53,7 +53,7 @@ if (session_status() === PHP_SESSION_NONE) {
   <div class="container mt-5">
     <div class="text-center">
       <h1 class="display-4">Bienvenido a Los Cobres</h1>
-      <p class="lead">awa</p>
+      <p class="lead"></p>
 
       <!-- Carrusel XL con fade -->
       <div class="carousel-container">
@@ -74,25 +74,25 @@ if (session_status() === PHP_SESSION_NONE) {
           <!-- Slides -->
           <div class="carousel-inner">
             <div class="carousel-item active">
-              <img src="public/img/front-tienda.jpg" alt="Frente de la Tienda">
+              <img src="public/css/img/front-tienda.jpg" alt="Frente de la Tienda">
               <div class="carousel-caption d-none d-md-block">
                 <h5>Frente de la Tienda</h5>
               </div>
             </div>
             <div class="carousel-item">
-              <img src="public/img/cruz.jpg" alt="Cruz Religiosa">
+              <img src="public/css/img/cruz.jpg" alt="Cruz Religiosa">
               <div class="carousel-caption d-none d-md-block">
                 <h5>Cruz Religiosa</h5>
               </div>
             </div>
             <div class="carousel-item">
-              <img src="public/img/velaYBiblia.png" alt="Vela y Biblia">
+              <img src="public/css/img/velaYBiblia.png" alt="Vela y Biblia">
               <div class="carousel-caption d-none d-md-block">
                 <h5>Vela y Biblia</h5>
               </div>
             </div>
             <div class="carousel-item">
-              <img src="public/img/cruz2.jpg" alt="Cruz">
+              <img src="public/css/img/cruz2.jpg" alt="Cruz">
               <div class="carousel-caption d-none d-md-block">
                 <h5>Cruz</h5>
               </div>
