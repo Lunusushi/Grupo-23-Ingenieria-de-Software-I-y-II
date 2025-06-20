@@ -16,5 +16,5 @@ VALUES
 -- Tabla IMAGEN_PRODUCTO
 INSERT INTO IMAGEN_PRODUCTO (id_imagen, id_producto, url_imagen, orden)
 VALUES 
-(1, 1, 'http://img.com/biblia_detalle.jpg', 1),
-(2, 2, 'http://img.com/rosario_detalle.jpg', 1);
+(1, 1, 'public/css/img/rosario_de_madera.jpeg', 1),
+(2, 2, 'public/css/img/biblia.jpeg', 1);
