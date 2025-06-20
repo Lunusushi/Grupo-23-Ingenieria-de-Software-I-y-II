@@ -26,8 +26,19 @@ class ProductController {
     }
 
     public static function eliminarProducto($conn, $id_producto) {
-        $stmt = $conn->prepare("UPDATE PRODUCTO SET activo = 0 WHERE id_producto = ?");
+        // Primero eliminar referencias en ITEM_FAVORITO
+        $stmt = $conn->prepare("DELETE FROM ITEM_FAVORITO WHERE id_producto = ?");
         $stmt->execute([$id_producto]);
+
+        // Luego eliminar referencias en ITEM_CARRITO
+        $stmt = $conn->prepare("DELETE FROM ITEM_CARRITO WHERE id_producto = ?");
+        $stmt->execute([$id_producto]);
+
+        // Aquí podrías agregar más eliminaciones si hay otras tablas con relación
+
+        // Finalmente eliminar el producto
+        $stmt = $conn->prepare("DELETE FROM PRODUCTO WHERE id_producto = ?");
+        return $stmt->execute([$id_producto]);
     }
 }
 ?>
