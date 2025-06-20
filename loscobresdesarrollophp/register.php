@@ -104,6 +104,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <div class="mt-3 text-center">
             <a href="login.php">¿Ya tienes cuenta? Inicia sesión</a>
         </div>
+        <div class="mt-2 text-center">
+            <a href="index.php" class="text-secondary">← Volver al inicio</a>
+        </div>
     </div>
 </div>
 

@@ -1,6 +1,8 @@
 <?php
-header("Location: catalogo.php");
-exit;
+
+//header("Location: catalogo.php");
+//exit;
+// Esto no tiene que ir aqui.
 
 require_once 'config/db.php';
 if (session_status() === PHP_SESSION_NONE) {
@@ -17,10 +19,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt->execute([$email]);
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    // Verificacion para que no se vuelan a logear
+    if (isset($_SESSION["usuario_id"])) {
+    header("Location: catalogo.php");
+    exit;
+}
     if ($usuario && password_verify($password, $usuario["password_hash"])) {
         $_SESSION["usuario_id"] = $usuario["id_usuario"];
         $_SESSION["usuario_nombre"] = $usuario["nombre"];
-        header("Location: catalogo.php");
+        header("Location: index.php");
         exit;
     } else {
         $mensaje = "❌ Credenciales incorrectas.";
@@ -62,6 +69,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <div class="mt-3 text-center">
             <a href="register.php">¿No tienes cuenta? Regístrate</a>
+        </div>
+        <div class="mt-2 text-center">
+            <a href="index.php" class="text-secondary">← Volver al inicio</a>
         </div>
     </div>
 </div>
