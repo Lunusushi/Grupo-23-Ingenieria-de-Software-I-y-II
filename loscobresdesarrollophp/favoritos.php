@@ -7,6 +7,7 @@ if (!isset($_SESSION['user']['id'])) {
 
 require_once 'config/MySqlDb.php';
 require_once 'controllers/ClientController.php';
+require_once 'partials/navbar.php'; // Incluyo el navbar común
 
 $id_cliente = $_SESSION['user']['id'];
 $lista = ClientController::obtenerLista($conn, $id_cliente);
@@ -31,8 +32,8 @@ $favoritos = ClientController::obtenerFavoritos($conn, $id_lista);
 </head>
 <body>
 
-<div class="container">
-  <h2>⭐ Mis Favoritos</h2>
+<div class="container mt-4">
+  <h2 class="mb-4">⭐ Mis Favoritos</h2>
 
   <?php if ($mensaje): ?>
     <div class="alert alert-info"><?= htmlspecialchars($mensaje) ?></div>
@@ -41,13 +42,15 @@ $favoritos = ClientController::obtenerFavoritos($conn, $id_lista);
   <?php if (count($favoritos) == 0): ?>
       <div class="alert alert-warning">No tienes productos en tu lista de favoritos.</div>
   <?php else: ?>
-      <div class="d-flex flex-wrap gap-3">
+      <div class="row g-3">
           <?php foreach ($favoritos as $f): ?>
-              <div class="card" style="width: 18rem;">
-                  <img src="<?= htmlspecialchars($f["url_imagen_principal"]) ?>" class="card-img-top" alt="Producto">
-                  <div class="card-body">
-                      <h5 class="card-title"><?= htmlspecialchars($f["nombre_producto"]) ?></h5>
-                      <p class="card-text">Agregado el: <?= htmlspecialchars(substr($f["fecha_agregado"], 0, 10)) ?></p>
+              <div class="col-md-4 col-sm-6">
+                  <div class="card h-100 shadow-sm">
+                      <img src="<?= htmlspecialchars($f["url_imagen_principal"]) ?>" class="card-img-top" alt="Producto">
+                      <div class="card-body d-flex flex-column">
+                          <h5 class="card-title"><?= htmlspecialchars($f["nombre_producto"]) ?></h5>
+                          <p class="card-text mt-auto"><small class="text-muted">Agregado el: <?= htmlspecialchars(substr($f["fecha_agregado"], 0, 10)) ?></small></p>
+                      </div>
                   </div>
               </div>
           <?php endforeach; ?>
