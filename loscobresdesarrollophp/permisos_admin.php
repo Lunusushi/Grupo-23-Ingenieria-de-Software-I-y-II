@@ -79,12 +79,16 @@ UserController::revocarCargo($conn, $id_usuario, $cargo);
       </thead>
       <tbody>
         <?php foreach ($usuarios as $u): ?>
+          <?php
+            $userCargo = $operadores[$u["id_usuario"]] ?? null;
+            // If logged in user is mantenedor, hide rows with administrador cargo
+            if (isset($_SESSION["cargo"]) && $_SESSION["cargo"] === 'mantenedor' && $userCargo === 'administrador') {
+                continue;
+            }
+          ?>
           <tr>
             <td><?= $u["nombre"] ?> <?= $u["apellido"] ?></td>
             <td><?= $u["email"] ?></td>
-            <?php
-              $userCargo = $operadores[$u["id_usuario"]] ?? null;
-            ?>
             <?php if (!isset($_SESSION["cargo"]) || $_SESSION["cargo"] !== 'mantenedor'): ?>
               <td>
                 <?php if ($userCargo === 'administrador'): ?>
