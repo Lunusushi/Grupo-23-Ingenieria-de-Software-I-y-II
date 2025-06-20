@@ -1,9 +1,5 @@
 <?php
 
-//header("Location: catalogo.php");
-//exit;
-// Esto no tiene que ir aqui.
-
 require_once 'config/db.php';
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -14,24 +10,64 @@ $mensaje = "";
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email = $_POST["email"];
     $password = $_POST["password"];
+    $user_type = $_POST["user_type"] ?? 'cliente';
 
-    $stmt = $conn->prepare("SELECT * FROM USUARIO WHERE email = ?");
-    $stmt->execute([$email]);
-    $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    // Verificacion para que no se vuelan a logear
+    // Prevent re-login if already logged in
     if (isset($_SESSION["usuario_id"])) {
-    header("Location: catalogo.php");
-    exit;
-}
-    if ($usuario && password_verify($password, $usuario["password_hash"])) {
+        header("Location: catalogo.php");
+        exit;
+    }
+
+$stmt = $conn->prepare("SELECT * FROM USUARIO WHERE email = ?");
+$stmt->execute([$email]);
+$usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if ($usuario && password_verify($password, $usuario["password_hash"])) {
+    if ($user_type === 'operador') {
+        $stmt2 = $conn->prepare("SELECT * FROM OPERADOR WHERE id_usuario = ?");
+        $stmt2->execute([$usuario["id_usuario"]]);
+        $operador = $stmt2->fetch(PDO::FETCH_ASSOC);
+
+        if ($operador) {
+            $_SESSION["usuario_id"] = $usuario["id_usuario"];
+            $_SESSION["usuario_nombre"] = $usuario["nombre"];
+            $_SESSION["user_type"] = 'operador';
+            $_SESSION["cargo"] = $operador["cargo"];
+
+            // Redirect based on cargo
+            switch ($operador["cargo"]) {
+                case 'administrador':
+                    header("Location: admin_index.php");
+                    break;
+                case 'mantenedor':
+                    header("Location: permisos_admin.php");
+                    break;
+                case 'catalogo':
+                    header("Location: productos_admin.php");
+                    break;
+                case 'caja':
+                    header("Location: verificar_pedidos.php");
+                    break;
+                default:
+                    header("Location: admin_index.php");
+                    break;
+            }
+            exit;
+        } else {
+            $mensaje = "❌ No tienes permisos de operador.";
+        }
+    } elseif ($user_type === 'cliente') {
         $_SESSION["usuario_id"] = $usuario["id_usuario"];
         $_SESSION["usuario_nombre"] = $usuario["nombre"];
-        header("Location: index.php");
+        $_SESSION["user_type"] = 'cliente';
+        header("Location: catalogo.php");
         exit;
     } else {
-        $mensaje = "❌ Credenciales incorrectas.";
+        $mensaje = "❌ Tipo de usuario no válido.";
     }
+} else {
+    $mensaje = "❌ Credenciales incorrectas.";
+}
 }
 ?>
 
@@ -62,6 +98,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <div class="mb-3">
                 <label for="password" class="form-label">Contraseña</label>
                 <input type="password" name="password" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Tipo de usuario</label>
+                <select name="user_type" class="form-select" required>
+                    <option value="cliente" selected>Cliente</option>
+                    <option value="operador">Operador</option>
+                </select>
             </div>
 
             <button class="btn btn-primary w-100">Entrar</button>

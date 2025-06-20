@@ -4,10 +4,6 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 ?>
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-  ...
-</nav>
-
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
   <div class="container-fluid">
     <a class="navbar-brand" href="index.php">🛒 Los Cobres</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -20,11 +16,23 @@ if (session_status() === PHP_SESSION_NONE) {
         <li class="nav-item"><a class="nav-link" href="carrito.php">Carrito</a></li>
         <li class="nav-item"><a class="nav-link" href="favoritos.php">Favoritos</a></li>
         <li class="nav-item"><a class="nav-link" href="realizar_pedido.php">Pedido</a></li>
-        <li class="nav-item"><a class="nav-link" href="verificar_pedido.php">Verificar Pedido</a></li>
 
-        <?php if (isset($_SESSION["usuario_id"]) && $_SESSION["usuario_id"] == 1): ?>
-          <li class="nav-item"><a class="nav-link" href="productos_admin.php">Admin Productos</a></li>
-          <li class="nav-item"><a class="nav-link" href="permisos_admin.php">Permisos</a></li>
+        <?php if (isset($_SESSION["user_type"]) && $_SESSION["user_type"] === 'operador'): ?>
+          <?php if ($_SESSION["cargo"] === 'administrador'): ?>
+            <li class="nav-item"><a class="nav-link" href="verificar_pedido.php">Verificar Pedido</a></li>
+            <li class="nav-item"><a class="nav-link" href="productos_admin.php">Admin Productos</a></li>
+            <li class="nav-item"><a class="nav-link" href="permisos_admin.php">Permisos</a></li>
+          <?php else: ?>
+            <?php if ($_SESSION["cargo"] === 'caja'): ?>
+              <li class="nav-item"><a class="nav-link" href="verificar_pedido.php">Verificar Pedido</a></li>
+            <?php endif; ?>
+            <?php if ($_SESSION["cargo"] === 'catalogo'): ?>
+              <li class="nav-item"><a class="nav-link" href="productos_admin.php">Admin Productos</a></li>
+            <?php endif; ?>
+            <?php if ($_SESSION["cargo"] === 'mantenedor'): ?>
+              <li class="nav-item"><a class="nav-link" href="permisos_admin.php">Permisos</a></li>
+            <?php endif; ?>
+          <?php endif; ?>
         <?php endif; ?>
       </ul>
 

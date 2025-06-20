@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 class FavoritosController {
     public static function obtenerLista($conn, $id_cliente) {
