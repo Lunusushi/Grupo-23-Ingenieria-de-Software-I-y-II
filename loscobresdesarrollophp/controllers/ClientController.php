@@ -7,6 +7,16 @@ if (session_status() === PHP_SESSION_NONE) {
 class ClientController {
     // CarritoController methods
     public static function obtenerCarrito($conn, $id_cliente) {
+        // Check if user is an operator
+        $checkOperador = $conn->prepare("SELECT cargo FROM OPERADOR WHERE id_usuario = ?");
+        $checkOperador->execute([$id_cliente]);
+        $operador = $checkOperador->fetch(PDO::FETCH_ASSOC);
+
+        if ($operador) {
+            // For operator users, return empty cart or handle accordingly
+            return null;
+        }
+
         // Check if id_cliente exists in CLIENTE table
         $checkCliente = $conn->prepare("SELECT id_cliente FROM CLIENTE WHERE id_cliente = ?");
         $checkCliente->execute([$id_cliente]);
@@ -62,6 +72,16 @@ class ClientController {
 
     // FavoritosController methods
     public static function obtenerLista($conn, $id_cliente) {
+        // Check if user is an operator
+        $checkOperador = $conn->prepare("SELECT cargo FROM OPERADOR WHERE id_usuario = ?");
+        $checkOperador->execute([$id_cliente]);
+        $operador = $checkOperador->fetch(PDO::FETCH_ASSOC);
+
+        if ($operador) {
+            // For operator users, return empty favorites list or handle accordingly
+            return null;
+        }
+
         $stmt = $conn->prepare("SELECT * FROM LISTA_FAVORITOS WHERE id_cliente = ?");
         $stmt->execute([$id_cliente]);
         $lista = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -111,6 +131,16 @@ class ClientController {
 
     // PedidoController methods
     public static function realizarPedido($conn, $id_cliente, $id_carrito, $metodo_pago, $lugar_retiro) {
+        // Check if user is an operator
+        $checkOperador = $conn->prepare("SELECT cargo FROM OPERADOR WHERE id_usuario = ?");
+        $checkOperador->execute([$id_cliente]);
+        $operador = $checkOperador->fetch(PDO::FETCH_ASSOC);
+
+        if ($operador) {
+            // For operator users, disallow placing orders or handle accordingly
+            throw new Exception("Operadores no pueden realizar pedidos.");
+        }
+
         $id_operador = 1;
 
         $stmt = $conn->prepare("INSERT INTO PEDIDO (id_cliente, id_carrito, metodo_pago, lugar_retiro, estado, codigo_verificacion, id_operador, id_op_registro, id_op_entrega)

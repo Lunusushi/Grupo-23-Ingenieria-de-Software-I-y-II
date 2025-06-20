@@ -1,12 +1,12 @@
 <?php
 require_once 'config/db.php';
-require_once 'controllers/ProductoController.php';
+require_once 'controllers/CatalogController.php';
 require_once 'partials/navbar.php';
 
-$categorias = ProductoController::obtenerCategorias($conn);
+$categorias = CatalogController::obtenerCategorias($conn);
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["nombre_producto"])) {
-    ProductoController::agregarProducto(
+    CatalogController::agregarProducto(
         $conn,
         $_POST["nombre_producto"],
         $_POST["descripcion"],
@@ -18,10 +18,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["nombre_producto"])) {
 }
 
 if (isset($_GET["eliminar"])) {
-    ProductoController::eliminarProducto($conn, $_GET["eliminar"]);
+    CatalogController::eliminarProducto($conn, $_GET["eliminar"]);
 }
 
-$productos = ProductoController::obtenerProductos($conn);
+$productos = CatalogController::obtenerProductos($conn);
 ?>
 
 <!DOCTYPE html>
@@ -33,8 +33,6 @@ $productos = ProductoController::obtenerProductos($conn);
   <link href="public/css/main.css" rel="stylesheet">
 </head>
 <body>
-
-
 
 <div class="container">
   <h2 class="mb-4">🛠️ Administrar Productos</h2>
