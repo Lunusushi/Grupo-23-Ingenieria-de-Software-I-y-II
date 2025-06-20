@@ -11,16 +11,32 @@ require_once 'partials/navbar.php';
 
 $id_cliente = $_SESSION['user']['id'];
 
+$mensaje = "";
 $carrito = ClientController::obtenerCarrito($conn, $id_cliente);
 $id_carrito = $carrito["id_carrito"];
 
-$mensaje = "";
+$codigo = null;
+$operadorAsignado = null;
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $metodo = $_POST["metodo_pago"];
     $lugar = $_POST["lugar_retiro"];
-    $codigo = ClientController::realizarPedido($conn, $id_cliente, $id_carrito, $metodo, $lugar);
-    $mensaje = "✅ Pedido registrado. Código de retiro: <strong>" . htmlspecialchars($codigo) . "</strong>";
+
+    try {
+        // Obtener el primer operador antes de hacer el pedido
+        $stmt = $conn->query("SELECT id_usuario FROM OPERADOR LIMIT 1");
+        $op = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$op) {
+            $mensaje = "⚠️ No hay operadores disponibles para asignar el pedido.";
+        } else {
+            $operadorAsignado = $op["id_usuario"];
+            $codigo = ClientController::realizarPedido($conn, $id_cliente, $id_carrito, $metodo, $lugar);
+            $mensaje = "✅ Pedido registrado. Código de retiro: <strong>" . htmlspecialchars($codigo) . "</strong><br>🧑‍💼 Operador asignado: <strong>ID $operadorAsignado</strong>";
+        }
+    } catch (Exception $e) {
+        $mensaje = "❌ Error al registrar el pedido: " . htmlspecialchars($e->getMessage());
+    }
 }
 ?>
 
@@ -38,7 +54,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   <h2 class="mb-4">📦 Finalizar Pedido</h2>
 
   <?php if ($mensaje): ?>
-    <div class="alert alert-success"><?= $mensaje ?></div>
+    <div class="alert alert-info"><?= $mensaje ?></div>
   <?php else: ?>
     <form method="POST" class="card p-4">
       <div class="mb-3">

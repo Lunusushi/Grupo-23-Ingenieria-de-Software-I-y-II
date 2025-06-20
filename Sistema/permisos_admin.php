@@ -24,9 +24,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if ($action === "asignar" && $cargo) {
         if (UserController::puedeAsignarCargo($currentUserCargo, $cargo, $currentUserId, $id_usuario, $targetUserCargo)) {
-            UserController::asignarOperador($conn, $id_usuario, $cargo);
-            header("Location: permisos_admin.php?mensaje=asignado");
-            exit;
+            try {
+                UserController::asignarOperador($conn, $id_usuario, $cargo);
+                header("Location: permisos_admin.php?mensaje=asignado");
+                exit;
+            } catch (Exception $e) {
+                $mensaje = $e->getMessage();
+            }
         } else {
             $mensaje = "❌ No tienes permiso para asignar este cargo.";
         }

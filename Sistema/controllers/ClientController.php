@@ -137,16 +137,22 @@ class ClientController {
         $operador = $checkOperador->fetch(PDO::FETCH_ASSOC);
 
         if ($operador) {
-            // For operator users, disallow placing orders or handle accordingly
             throw new Exception("Operadores no pueden realizar pedidos.");
         }
 
-        $id_operador = 18;
+        // Obtener id_operador, que es la PK de la tabla OPERADOR
+        $stmt = $conn->query("SELECT id_operador FROM OPERADOR LIMIT 1");
+        $op = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$op) {
+            throw new Exception("No hay operadores disponibles para asignar el pedido.");
+        }
+        $id_operador = $op["id_operador"];
 
         $stmt = $conn->prepare("INSERT INTO PEDIDO (id_cliente, id_carrito, metodo_pago, lugar_retiro, estado, codigo_verificacion, id_operador, id_op_registro, id_op_entrega)
                                 VALUES (?, ?, ?, ?, 'pendiente', ?, ?, ?, ?)");
         $codigo = substr(md5(uniqid()), 0, 6);
         $stmt->execute([$id_cliente, $id_carrito, $metodo_pago, $lugar_retiro, $codigo, $id_operador, $id_operador, $id_operador]);
+
 
         $id_pedido = $conn->lastInsertId();
 

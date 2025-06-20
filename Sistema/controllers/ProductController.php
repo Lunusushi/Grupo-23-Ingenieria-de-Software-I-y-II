@@ -26,19 +26,17 @@ class ProductController {
     }
 
     public static function eliminarProducto($conn, $id_producto) {
-        // Primero eliminar referencias en ITEM_FAVORITO
-        $stmt = $conn->prepare("DELETE FROM ITEM_FAVORITO WHERE id_producto = ?");
-        $stmt->execute([$id_producto]);
-
-        // Luego eliminar referencias en ITEM_CARRITO
-        $stmt = $conn->prepare("DELETE FROM ITEM_CARRITO WHERE id_producto = ?");
-        $stmt->execute([$id_producto]);
-
-        // Aquí podrías agregar más eliminaciones si hay otras tablas con relación
-
-        // Finalmente eliminar el producto
-        $stmt = $conn->prepare("DELETE FROM PRODUCTO WHERE id_producto = ?");
-        return $stmt->execute([$id_producto]);
+        try {
+            $stmt = $conn->prepare("DELETE FROM PRODUCTO WHERE id_producto = ?");
+            $stmt->execute([$id_producto]);
+            return true;
+        } catch (PDOException $e) {
+            if ($e->getCode() === '23000') {
+                return "⚠️ No se puede eliminar el producto porque está asociado a pedidos existentes.";
+            } else {
+                throw $e;
+            }
+        }
     }
 }
 ?>

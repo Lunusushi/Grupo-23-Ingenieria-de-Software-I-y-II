@@ -18,13 +18,16 @@ class UserController {
     }
 
     public static function asignarOperador($conn, $id_usuario, $cargo = "caja") {
-        // Eliminar cualquier otro rol anterior
+        // Verificar si es cliente
+        $checkCliente = $conn->prepare("SELECT 1 FROM CLIENTE WHERE id_cliente = ?");
+        $checkCliente->execute([$id_usuario]);
+        if ($checkCliente->fetch()) {
+            throw new Exception("❌ No se puede asignar un cargo administrativo a un cliente.");
+        }
+
+        // Eliminar cualquier otro rol anterior en operador
         $stmt = $conn->prepare("DELETE FROM OPERADOR WHERE id_usuario = ?");
         $stmt->execute([$id_usuario]);
-
-        // Asegurar que no esté en la tabla CLIENTE
-        $delCliente = $conn->prepare("DELETE FROM CLIENTE WHERE id_usuario = ?");
-        $delCliente->execute([$id_usuario]);
 
         // Insertar nuevo rol
         $stmt = $conn->prepare("INSERT INTO OPERADOR (id_usuario, cargo) VALUES (?, ?)");

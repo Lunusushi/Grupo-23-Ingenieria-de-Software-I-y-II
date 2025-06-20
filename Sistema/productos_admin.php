@@ -5,6 +5,10 @@ require_once 'partials/navbar.php';
 
 $categorias = ProductController::obtenerCategorias($conn);
 
+$mensaje_error = "";
+$mensaje_exito = "";
+
+// Agregar producto
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["nombre_producto"])) {
     ProductController::agregarProducto(
         $conn,
@@ -15,10 +19,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["nombre_producto"])) {
         $_POST["url_imagen_principal"],
         $_POST["id_categoria"]
     );
+    $mensaje_exito = "✅ Producto agregado correctamente.";
 }
 
+// Eliminar producto
 if (isset($_GET["eliminar"])) {
-    ProductController::eliminarProducto($conn, $_GET["eliminar"]);
+    $resultado = ProductController::eliminarProducto($conn, $_GET["eliminar"]);
+
+    if (is_string($resultado)) {
+        $mensaje_error = $resultado;
+    } else {
+        $mensaje_exito = "✅ Producto eliminado exitosamente.";
+    }
 }
 
 $productos = ProductController::obtenerProductos($conn);
@@ -34,8 +46,16 @@ $productos = ProductController::obtenerProductos($conn);
 </head>
 <body>
 
-<div class="container">
+<div class="container mt-4">
   <h2 class="mb-4">🛠️ Administrar Productos</h2>
+
+  <?php if ($mensaje_error): ?>
+    <div class="alert alert-warning"><?= htmlspecialchars($mensaje_error) ?></div>
+  <?php endif; ?>
+
+  <?php if ($mensaje_exito): ?>
+    <div class="alert alert-success"><?= htmlspecialchars($mensaje_exito) ?></div>
+  <?php endif; ?>
 
   <form method="POST" class="card p-4 mb-4">
     <h5 class="mb-3">Añadir nuevo producto</h5>
