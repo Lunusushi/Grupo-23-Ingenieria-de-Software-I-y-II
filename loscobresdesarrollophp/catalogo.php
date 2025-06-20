@@ -1,6 +1,6 @@
 <?php
 require_once 'config/MySqlDb.php';
-require_once 'controllers/CatalogController.php';
+require_once 'controllers/ProductController.php';
 require_once 'partials/navbar.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -9,9 +9,9 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $id_cliente = $_SESSION["usuario_id"] ?? 1;
 
-$categorias = CatalogController::obtenerCategorias($conn);
+$categorias = ProductController::obtenerCategorias($conn);
 $id_categorias = $_GET["cat"] ?? [];
-$productos = CatalogController::obtenerProductos($conn, $id_categorias);
+$productos = ProductController::obtenerProductos($conn, $id_categorias);
 ?>
 
 <!DOCTYPE html>

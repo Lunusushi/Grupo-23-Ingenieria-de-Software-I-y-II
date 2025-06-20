@@ -2,16 +2,39 @@
 require_once __DIR__ . '/../config/MySqlDb.php';
 
 class AuthenticationController {
-    public static function login($email, $password, $user_type) {
+    public static function login($email, $password, $tipo_usuario) {
         global $conn;
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
 
-        if ($user_type === 'cliente') {
-            $stmt = $conn->prepare("SELECT * FROM USUARIO WHERE email = ?");
+        if ($tipo_usuario === 'operador') {
+            $stmt = $conn->prepare("SELECT o.id_usuario, o.cargo, u.nombre, u.email, u.password_hash
+                                    FROM OPERADOR o
+                                    JOIN USUARIO u ON o.id_usuario = u.id_usuario
+                                    WHERE u.email = ?");
             $stmt->execute([$email]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($user && password_verify($password, $user['password_hash'])) {
+                $_SESSION['user'] = [
+                    'id' => $user['id_usuario'],
+                    'name' => $user['nombre'],
+                    'email' => $user['email'],
+                    'type' => 'operador',
+                    'cargo' => $user['cargo']
+                ];
+                return true;
+            }
+        }
+
+        if ($tipo_usuario === 'cliente') {
+            $stmt = $conn->prepare("SELECT * FROM USUARIO 
+                                    WHERE email = ? 
+                                    AND id_usuario NOT IN (SELECT id_usuario FROM OPERADOR)");
+            $stmt->execute([$email]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
             if ($user && password_verify($password, $user['password_hash'])) {
                 $_SESSION['user'] = [
                     'id' => $user['id_usuario'],
@@ -21,26 +44,8 @@ class AuthenticationController {
                 ];
                 return true;
             }
-        } else {
-            $stmt = $conn->prepare("SELECT o.id_usuario, o.cargo, u.nombre, u.email FROM OPERADOR o JOIN USUARIO u ON o.id_usuario = u.id_usuario WHERE u.email = ?");
-            $stmt->execute([$email]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($user) {
-                $stmt2 = $conn->prepare("SELECT password_hash FROM USUARIO WHERE id_usuario = ?");
-                $stmt2->execute([$user['id_usuario']]);
-                $userPass = $stmt2->fetchColumn();
-                if ($userPass && password_verify($password, $userPass)) {
-                    $_SESSION['user'] = [
-                        'id' => $user['id_usuario'],
-                        'name' => $user['nombre'],
-                        'email' => $email,
-                        'type' => 'operador',
-                        'cargo' => $user['cargo']
-                    ];
-                    return true;
-                }
-            }
         }
+
         return false;
     }
 

@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/MySqlDb.php';
 
-class CatalogController {
+class ProductController {
     public static function obtenerProductos($conn, $id_categorias = []) {
         if (empty($id_categorias)) {
             $stmt = $conn->query("SELECT * FROM PRODUCTO WHERE activo = 1");

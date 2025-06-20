@@ -44,5 +44,58 @@ class UserController {
         $stmt = $conn->prepare("DELETE FROM OPERADOR WHERE id_usuario = ? AND cargo = ?");
         $stmt->execute([$id_usuario, $cargo]);
     }
+
+    public static function puedeAsignarCargo($currentUserCargo, $targetCargo, $currentUserId, $targetUserId, $targetUserCurrentCargo) {
+    // Administrador puede asignar todo, excepto a sí mismo degradarse
+        if ($currentUserCargo === 'administrador') {
+            if ($targetUserId === $currentUserId && $targetCargo !== 'administrador') {
+                return false; // No puede degradarse a sí mismo
+            }
+            return true;
+        }
+
+        // Mantenedor solo puede asignar caja o catálogo, nunca admin ni a admin
+        if ($currentUserCargo === 'mantenedor') {
+            if (in_array($targetCargo, ['caja', 'catalogo']) && $targetUserCurrentCargo !== 'administrador') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static function puedeRevocarCargo($currentUserCargo, $targetCargo, $currentUserId, $targetUserId, $targetUserCurrentCargo) {
+        // Administrador no puede revocar su propio cargo de admin
+        if ($currentUserCargo === 'administrador') {
+            if ($targetCargo === 'administrador' && $targetUserId === $currentUserId) {
+                return false;
+            }
+            return true;
+        }
+
+        // Mantenedor no puede revocar admin
+        if ($currentUserCargo === 'mantenedor') {
+            if (in_array($targetCargo, ['caja', 'catalogo']) && $targetUserCurrentCargo !== 'administrador') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static function asignarOperador($conn, $id_usuario, $cargo) {
+        // Primero, eliminar si ya tiene otro cargo (opcional)
+        $stmt = $conn->prepare("DELETE FROM OPERADOR WHERE id_usuario = ?");
+        $stmt->execute([$id_usuario]);
+
+        // Insertar nuevo cargo
+        $stmt = $conn->prepare("INSERT INTO OPERADOR (id_usuario, cargo) VALUES (?, ?)");
+        $stmt->execute([$id_usuario, $cargo]);
+    }
+
+    public static function revocarCargo($conn, $id_usuario, $cargo) {
+        $stmt = $conn->prepare("DELETE FROM OPERADOR WHERE id_usuario = ? AND cargo = ?");
+        $stmt->execute([$id_usuario, $cargo]);
+    }
+}
 }
 ?>

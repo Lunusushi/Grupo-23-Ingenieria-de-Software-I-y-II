@@ -1,5 +1,4 @@
 <?php
-
 require_once 'controllers/AuthenticationController.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -11,15 +10,15 @@ $mensaje = "";
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email = $_POST["email"];
     $password = $_POST["password"];
-    $user_type = $_POST["user_type"] ?? 'cliente';
+    $tipo_usuario = $_POST["tipo_usuario"]; // 'cliente' o 'operador'
 
-    // Prevent re-login if already logged in
+    // Prevenir re-login
     if (isset($_SESSION["user"])) {
         header("Location: catalogo.php");
         exit;
     }
 
-    $loginSuccess = AuthenticationController::login($email, $password, $user_type);
+    $loginSuccess = AuthenticationController::login($email, $password, $tipo_usuario);
 
     if ($loginSuccess) {
         $user = AuthenticationController::getCurrentUser();
@@ -29,7 +28,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION["cargo"] = $user['cargo'];
             $_SESSION["id_operador"] = $user['id'];
 
-            // Redirect based on cargo
             switch ($user['cargo']) {
                 case 'administrador':
                     header("Location: admin_index.php");
@@ -91,9 +89,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </div>
 
             <div class="mb-3">
-                <label class="form-label">Tipo de usuario</label>
-                <select name="user_type" class="form-select" required>
-                    <option value="cliente" selected>Cliente</option>
+                <label for="tipo_usuario" class="form-label">Tipo de usuario</label>
+                <select name="tipo_usuario" class="form-select" required>
+                    <option value="cliente">Cliente</option>
                     <option value="operador">Operador</option>
                 </select>
             </div>

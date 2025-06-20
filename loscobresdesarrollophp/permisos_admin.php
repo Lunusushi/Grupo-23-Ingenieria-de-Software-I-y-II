@@ -11,36 +11,33 @@ $usuarios = UserController::obtenerUsuarios($conn);
 $operadores = UserController::obtenerOperadores($conn);
 $mensaje = "";
 
+$currentUserId = $_SESSION['user']['id'] ?? null;
+$currentUserCargo = $_SESSION['cargo'] ?? null;
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $id_usuario = $_POST["id_usuario"];
-    $cargo = $_POST["cargo"] ?? null;
-    $action = $_POST["action"] ?? null;
+  $id_usuario = $_POST["id_usuario"];
+  $cargo = $_POST["cargo"] ?? null;
+  $action = $_POST["action"] ?? null;
 
-    // Get current user cargo for permission check
-    $currentUserCargo = null;
-    if (isset($_SESSION["user_type"]) && $_SESSION["user_type"] === 'operador') {
-        $currentUserCargo = $_SESSION["cargo"];
-    }
+  $currentUserId = $_SESSION["user"]["id"] ?? null;
+  $currentUserCargo = $_SESSION["cargo"] ?? null;
+  $targetUserCargo = $operadores[$id_usuario] ?? null;
 
-    if ($action === "asignar" && $cargo) {
-        // Permission check
-        if ($currentUserCargo === 'administrador' || 
-            ($currentUserCargo === 'mantenedor' && in_array($cargo, ['catalogo', 'caja']))) {
-UserController::asignarOperador($conn, $id_usuario, $cargo);
-            $mensaje = "✅ Permiso asignado correctamente.";
-        } else {
-            $mensaje = "❌ No tienes permiso para asignar este cargo.";
-        }
-    } elseif ($action === "revocar" && $cargo) {
-        if ($currentUserCargo === 'administrador' || 
-            ($currentUserCargo === 'mantenedor' && in_array($cargo, ['catalogo', 'caja']))) {
-UserController::revocarCargo($conn, $id_usuario, $cargo);
-            $mensaje = "🗑️ Permiso revocado correctamente.";
-        } else {
-            $mensaje = "❌ No tienes permiso para revocar este cargo.";
-        }
+  if ($action === "asignar" && $cargo) {
+    if (UserController::puedeAsignarCargo($currentUserCargo, $cargo, $currentUserId, $id_usuario, $targetUserCargo)) {
+        UserController::asignarOperador($conn, $id_usuario, $cargo);
+        $mensaje = "✅ Permiso asignado correctamente.";
+    } else {
+        $mensaje = "❌ No tienes permiso para asignar este cargo.";
     }
-    $operadores = UserController::obtenerOperadores($conn);
+  } elseif ($action === "revocar" && $cargo) {
+    if (UserController::puedeRevocarCargo($currentUserCargo, $cargo, $currentUserId, $id_usuario, $targetUserCargo)) {
+        UserController::revocarCargo($conn, $id_usuario, $cargo);
+        $mensaje = "🗑️ Permiso revocado correctamente.";
+    } else {
+        $mensaje = "❌ No tienes permiso para revocar este cargo.";
+    }
+  }
 }
 ?>
 
@@ -53,7 +50,6 @@ UserController::revocarCargo($conn, $id_usuario, $cargo);
   <link href="public/css/main.css" rel="stylesheet">
 </head>
 <body>
-
 
 <div class="container">
   <h2 class="mb-4">⚙️ Gestión de Permisos de Usuario</h2>
@@ -68,63 +64,74 @@ UserController::revocarCargo($conn, $id_usuario, $cargo);
         <tr>
           <th>Nombre</th>
           <th>Email</th>
-          <?php if (!isset($_SESSION["cargo"]) || $_SESSION["cargo"] !== 'mantenedor'): ?>
-            <th>Administrador</th>
-            <th>Mantenedor</th>
-          <?php endif; ?>
+          <th>Administrador</th>
+          <th>Mantenedor</th>
           <th>Catálogo</th>
           <th>Caja</th>
-          <!-- Removed Acción column -->
         </tr>
       </thead>
       <tbody>
         <?php foreach ($usuarios as $u): ?>
+          <?php $userCargo = $operadores[$u["id_usuario"]] ?? null; ?>
           <tr>
             <td><?= $u["nombre"] ?> <?= $u["apellido"] ?></td>
             <td><?= $u["email"] ?></td>
-            <?php
-              $userCargo = $operadores[$u["id_usuario"]] ?? null;
-            ?>
-            <?php if (!isset($_SESSION["cargo"]) || $_SESSION["cargo"] !== 'mantenedor'): ?>
-              <td>
-                <?php if ($userCargo === 'administrador'): ?>
+
+            <!-- Administrador -->
+            <td>
+              <?php if ($userCargo === 'administrador'): ?>
+                <?php if ($currentUserCargo === 'administrador' && $u["id_usuario"] != $currentUserId): ?>
                   <form method="POST" class="d-inline">
                     <input type="hidden" name="id_usuario" value="<?= $u["id_usuario"] ?>">
                     <input type="hidden" name="cargo" value="administrador">
-                    <button name="revocar" value="true" class="btn btn-danger btn-sm">Revocar</button>
+                    <button name="action" value="revocar" class="btn btn-danger btn-sm">Revocar</button>
                   </form>
-                <?php elseif (isset($_SESSION["cargo"]) && $_SESSION["cargo"] === 'administrador'): ?>
-                  <form method="POST" class="d-inline">
-                    <input type="hidden" name="id_usuario" value="<?= $u["id_usuario"] ?>">
-                    <input type="hidden" name="cargo" value="administrador">
-                    <button name="action" value="asignar" class="btn btn-success btn-sm">Asignar</button>
-                  </form>
+                <?php else: ?>
+                  ✅
                 <?php endif; ?>
-              </td>
-              <td>
-                <?php if ($userCargo === 'mantenedor'): ?>
+              <?php elseif ($currentUserCargo === 'administrador'): ?>
+                <form method="POST" class="d-inline">
+                  <input type="hidden" name="id_usuario" value="<?= $u["id_usuario"] ?>">
+                  <input type="hidden" name="cargo" value="administrador">
+                  <button name="action" value="asignar" class="btn btn-success btn-sm">Asignar</button>
+                </form>
+              <?php endif; ?>
+            </td>
+
+            <!-- Mantenedor -->
+            <td>
+              <?php if ($userCargo === 'mantenedor'): ?>
+                <?php if ($currentUserCargo === 'administrador'): ?>
                   <form method="POST" class="d-inline">
                     <input type="hidden" name="id_usuario" value="<?= $u["id_usuario"] ?>">
                     <input type="hidden" name="cargo" value="mantenedor">
-                    <button name="revocar" value="true" class="btn btn-danger btn-sm">Revocar</button>
+                    <button name="action" value="revocar" class="btn btn-danger btn-sm">Revocar</button>
                   </form>
-                <?php elseif (isset($_SESSION["cargo"]) && in_array($_SESSION["cargo"], ['administrador', 'mantenedor'])): ?>
-                  <form method="POST" class="d-inline">
-                    <input type="hidden" name="id_usuario" value="<?= $u["id_usuario"] ?>">
-                    <input type="hidden" name="cargo" value="mantenedor">
-                    <button name="action" value="asignar" class="btn btn-success btn-sm">Asignar</button>
-                  </form>
+                <?php else: ?>
+                  ✅
                 <?php endif; ?>
-              </td>
-            <?php endif; ?>
+              <?php elseif ($currentUserCargo === 'administrador'): ?>
+                <form method="POST" class="d-inline">
+                  <input type="hidden" name="id_usuario" value="<?= $u["id_usuario"] ?>">
+                  <input type="hidden" name="cargo" value="mantenedor">
+                  <button name="action" value="asignar" class="btn btn-success btn-sm">Asignar</button>
+                </form>
+              <?php endif; ?>
+            </td>
+
+            <!-- Catálogo -->
             <td>
               <?php if ($userCargo === 'catalogo'): ?>
-                <form method="POST" class="d-inline">
-                  <input type="hidden" name="id_usuario" value="<?= $u["id_usuario"] ?>">
-                  <input type="hidden" name="cargo" value="catalogo">
-                  <button name="revocar" value="true" class="btn btn-danger btn-sm">Revocar</button>
-                </form>
-              <?php elseif (isset($_SESSION["cargo"]) && in_array($_SESSION["cargo"], ['administrador', 'mantenedor'])): ?>
+                <?php if (in_array($currentUserCargo, ['administrador', 'mantenedor'])): ?>
+                  <form method="POST" class="d-inline">
+                    <input type="hidden" name="id_usuario" value="<?= $u["id_usuario"] ?>">
+                    <input type="hidden" name="cargo" value="catalogo">
+                    <button name="action" value="revocar" class="btn btn-danger btn-sm">Revocar</button>
+                  </form>
+                <?php else: ?>
+                  ✅
+                <?php endif; ?>
+              <?php elseif (in_array($currentUserCargo, ['administrador', 'mantenedor'])): ?>
                 <form method="POST" class="d-inline">
                   <input type="hidden" name="id_usuario" value="<?= $u["id_usuario"] ?>">
                   <input type="hidden" name="cargo" value="catalogo">
@@ -132,14 +139,20 @@ UserController::revocarCargo($conn, $id_usuario, $cargo);
                 </form>
               <?php endif; ?>
             </td>
+
+            <!-- Caja -->
             <td>
               <?php if ($userCargo === 'caja'): ?>
-                <form method="POST" class="d-inline">
-                  <input type="hidden" name="id_usuario" value="<?= $u["id_usuario"] ?>">
-                  <input type="hidden" name="cargo" value="caja">
-                  <button name="revocar" value="true" class="btn btn-danger btn-sm">Revocar</button>
-                </form>
-              <?php elseif (isset($_SESSION["cargo"]) && in_array($_SESSION["cargo"], ['administrador', 'mantenedor'])): ?>
+                <?php if (in_array($currentUserCargo, ['administrador', 'mantenedor'])): ?>
+                  <form method="POST" class="d-inline">
+                    <input type="hidden" name="id_usuario" value="<?= $u["id_usuario"] ?>">
+                    <input type="hidden" name="cargo" value="caja">
+                    <button name="action" value="revocar" class="btn btn-danger btn-sm">Revocar</button>
+                  </form>
+                <?php else: ?>
+                  ✅
+                <?php endif; ?>
+              <?php elseif (in_array($currentUserCargo, ['administrador', 'mantenedor'])): ?>
                 <form method="POST" class="d-inline">
                   <input type="hidden" name="id_usuario" value="<?= $u["id_usuario"] ?>">
                   <input type="hidden" name="cargo" value="caja">
@@ -147,6 +160,7 @@ UserController::revocarCargo($conn, $id_usuario, $cargo);
                 </form>
               <?php endif; ?>
             </td>
+
           </tr>
         <?php endforeach; ?>
       </tbody>

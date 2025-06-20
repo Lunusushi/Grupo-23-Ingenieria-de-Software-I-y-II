@@ -1,12 +1,12 @@
 <?php
 require_once 'config/MySqlDb.php';
-require_once 'controllers/CatalogController.php';
+require_once 'controllers/ProductController.php';
 require_once 'partials/navbar.php';
 
-$categorias = CatalogController::obtenerCategorias($conn);
+$categorias = ProductController::obtenerCategorias($conn);
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["nombre_producto"])) {
-    CatalogController::agregarProducto(
+    ProductController::agregarProducto(
         $conn,
         $_POST["nombre_producto"],
         $_POST["descripcion"],
@@ -18,10 +18,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["nombre_producto"])) {
 }
 
 if (isset($_GET["eliminar"])) {
-    CatalogController::eliminarProducto($conn, $_GET["eliminar"]);
+    ProductController::eliminarProducto($conn, $_GET["eliminar"]);
 }
 
-$productos = CatalogController::obtenerProductos($conn);
+$productos = ProductController::obtenerProductos($conn);
 ?>
 
 <!DOCTYPE html>
