@@ -15,26 +15,34 @@ if (session_status() === PHP_SESSION_NONE) {
   >
   <style>
     .carousel-container {
-      display: flex;
-      justify-content: center;
-      margin: 2rem 0;
+      margin: 2rem auto;
     }
     #carruselReligioso {
-      width: 100%;
-      max-width: 700px;
+      max-width: 90%;
+      margin: 0 auto;
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.15);
     }
-    #carruselReligioso img {
+    #carruselReligioso .carousel-item img {
       width: 100%;
-      height: 320px;
+      height: 500px;
       object-fit: cover;
     }
-    @media (max-width: 768px) {
-      #carruselReligioso img {
-        height: 180px;
+    @media (max-width: 992px) {
+      #carruselReligioso .carousel-item img {
+        height: 350px;
       }
+    }
+    @media (max-width: 576px) {
+      #carruselReligioso .carousel-item img {
+        height: 220px;
+      }
+    }
+    .carousel-caption {
+      background: rgba(0,0,0,0.4);
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
     }
   </style>
 </head>
@@ -47,32 +55,51 @@ if (session_status() === PHP_SESSION_NONE) {
       <h1 class="display-4">Bienvenido a Los Cobres</h1>
       <p class="lead">awa</p>
 
-      <!-- Carrusel Religioso (local) -->
+      <!-- Carrusel XL con fade -->
       <div class="carousel-container">
         <div
           id="carruselReligioso"
-          class="carousel slide"
+          class="carousel slide carousel-fade"
           data-bs-ride="carousel"
         >
+
+          <!-- Indicadores -->
           <div class="carousel-indicators">
-            <button type="button" data-bs-target="#carruselReligioso" data-bs-slide-to="0" class="active" aria-current="true"></button>
+            <button type="button" data-bs-target="#carruselReligioso" data-bs-slide-to="0" class="active"></button>
             <button type="button" data-bs-target="#carruselReligioso" data-bs-slide-to="1"></button>
             <button type="button" data-bs-target="#carruselReligioso" data-bs-slide-to="2"></button>
+            <button type="button" data-bs-target="#carruselReligioso" data-bs-slide-to="3"></button>
           </div>
+
+          <!-- Slides -->
           <div class="carousel-inner">
             <div class="carousel-item active">
-              <img src="public\img\front-tienda.jpg" class="d-block" alt="Tienda de Los Cobres">
+              <img src="public/img/front-tienda.jpg" alt="Frente de la Tienda">
+              <div class="carousel-caption d-none d-md-block">
+                <h5>Frente de la Tienda</h5>
+              </div>
             </div>
             <div class="carousel-item">
-              <img src="public\img\cruz.jpg" class="d-block" alt="Cruz">
+              <img src="public/img/cruz.jpg" alt="Cruz Religiosa">
+              <div class="carousel-caption d-none d-md-block">
+                <h5>Cruz Religiosa</h5>
+              </div>
             </div>
             <div class="carousel-item">
-              <img src="public\img\velaYBilbia.jpg" class="d-block" alt="Vela y Biblia">
+              <img src="public/img/velaYBiblia.png" alt="Vela y Biblia">
+              <div class="carousel-caption d-none d-md-block">
+                <h5>Vela y Biblia</h5>
+              </div>
             </div>
             <div class="carousel-item">
-              <img src="public\img\figurasReligiosas.jpg" class="d-block" alt="Figuras Religiosas">
+              <img src="public/img/cruz2.jpg" alt="Cruz">
+              <div class="carousel-caption d-none d-md-block">
+                <h5>Cruz</h5>
+              </div>
             </div>
           </div>
+
+          <!-- Controles -->
           <button class="carousel-control-prev" type="button" data-bs-target="#carruselReligioso" data-bs-slide="prev">
             <span class="carousel-control-prev-icon"></span>
             <span class="visually-hidden">Anterior</span>
