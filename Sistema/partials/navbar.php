@@ -25,23 +25,24 @@ $cargo = $_SESSION["cargo"] ?? null;
           <li class="nav-item"><a class="nav-link" href="carrito.php">Carrito</a></li>
           <li class="nav-item"><a class="nav-link" href="favoritos.php">Favoritos</a></li>
           <li class="nav-item"><a class="nav-link" href="realizar_pedido.php">Pedido</a></li>
-
+          
         <?php elseif ($userType === 'operador'): ?>
-          <!-- Secciones para OPERADOR según su cargo -->
+          <!-- Secciones para operador -->
           <?php if ($cargo === 'administrador'): ?>
+            <!-- Secciones para cargo administrador -->
             <li class="nav-item"><a class="nav-link" href="verificar_pedido.php">Verificar Pedido</a></li>
             <li class="nav-item"><a class="nav-link" href="productos_admin.php">Admin Productos</a></li>
             <li class="nav-item"><a class="nav-link" href="permisos_admin.php">Permisos</a></li>
-
           <?php elseif ($cargo === 'mantenedor'): ?>
+            <!-- Secciones para cargo mantenedor -->
             <li class="nav-item"><a class="nav-link" href="verificar_pedido.php">Verificar Pedido</a></li>
             <li class="nav-item"><a class="nav-link" href="productos_admin.php">Admin Productos</a></li>
             <li class="nav-item"><a class="nav-link" href="permisos_admin.php">Permisos</a></li>
-
           <?php elseif ($cargo === 'catalogo'): ?>
+            <!-- Secciones para cargo catalogo -->
             <li class="nav-item"><a class="nav-link" href="productos_admin.php">Admin Productos</a></li>
-
           <?php elseif ($cargo === 'caja'): ?>
+            <!-- Secciones para cargo caja -->
             <li class="nav-item"><a class="nav-link" href="verificar_pedido.php">Verificar Pedido</a></li>
           <?php endif; ?>
         <?php endif; ?>
