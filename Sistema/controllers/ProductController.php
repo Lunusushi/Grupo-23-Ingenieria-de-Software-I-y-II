@@ -38,5 +38,25 @@ class ProductController {
             }
         }
     }
+
+    public static function buscarProductos($conn, $keyword) {
+        $stmt = $conn->prepare("SELECT id_producto, nombre_producto, url_imagen_principal 
+                                FROM PRODUCTO 
+                                WHERE activo = 1 AND nombre_producto LIKE ?
+                                LIMIT 10"); //esta cosa ve el limite
+        $stmt->execute(['%' . $keyword . '%']);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function buscarProductosJSON($conn, $keyword) {
+        $productos = self::buscarProductos($conn, $keyword);
+        header('Content-Type: application/json');
+        echo json_encode($productos);
+        exit;
+    }
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'buscar' && isset($_GET['q'])) {
+    ProductController::buscarProductosJSON($conn, $_GET['q']);
 }
 ?>

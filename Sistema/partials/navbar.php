@@ -51,6 +51,20 @@ $cargo = $_SESSION["cargo"] ?? null;
           <?php endif; ?>
         <?php endif; ?>
       </ul>
+      
+      <form id="search-form" action="catalogo.php" method="GET" style="position:relative;">
+        <input
+            type="text" 
+            id="search-input" 
+            name="q" 
+            placeholder="Buscar productos..." 
+            autocomplete="off"
+            style="padding: 5px 10px; width: 250px; border-radius: 5px; border: 1px solid #ccc; ">
+        <!-- Contenedor para las sugerencias -->
+        <div id="suggestions" 
+            style="position: absolute; top: 100%; left: 0; width: 250px; border: 1px solid #ccc; background: #fff; display: none; z-index: 1000;">
+        </div>
+      </form>
 
       <ul class="navbar-nav">
         <?php if ($user): ?>
@@ -66,3 +80,42 @@ $cargo = $_SESSION["cargo"] ?? null;
     </div>
   </div>
 </nav>
+<script>
+    const searchInput = document.getElementById('search-input');
+    const suggestionsBox = document.getElementById('suggestions');
+
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.trim();
+        if (query.length === 0) {
+            suggestionsBox.innerHTML = '';
+            suggestionsBox.style.display = "none";
+            return;
+        }
+
+        fetch(`controllers/productController.php?action=buscar&q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(products => {
+                suggestionsBox.innerHTML = '';
+                products.forEach(product => {
+                  const item = document.createElement('a');
+                  item.href = `catalogo.php?id=${product.id_producto}`;
+                  item.textContent = product.nombre_producto;
+                  item.style.display = 'block';
+                  item.style.padding = '5px 10px';
+                  item.style.textDecoration = 'none';
+                  item.style.color = '#000';
+                  item.addEventListener('mouseover', () => item.style.backgroundColor = '#f0f0f0');
+                  item.addEventListener('mouseout', () => item.style.backgroundColor = '#fff');
+                  suggestionsBox.appendChild(item);
+                });
+            suggestionsBox.style.display = products.length ? 'block' : 'none';
+            });
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+            suggestionsBox.innerHTML = '';
+            suggestionsBox.style.display = 'none';
+        }
+    });
+</script>
