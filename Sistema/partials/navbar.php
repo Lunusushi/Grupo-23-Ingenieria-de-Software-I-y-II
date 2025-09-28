@@ -8,6 +8,10 @@ $userType = $_SESSION["user_type"] ?? null;
 $cargo = $_SESSION["cargo"] ?? null;
 ?>
 
+
+
+<!-- Pendiente: Creacion del campo de busqueda -->
+ 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
   <div class="container-fluid">
     <a class="navbar-brand" href="index.php">🛒 Los Cobres</a>
