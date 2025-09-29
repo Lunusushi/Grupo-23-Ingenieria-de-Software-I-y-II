@@ -50,7 +50,10 @@ $productos = ProductController::obtenerProductos($conn, $id_categorias);
         <div class="card mb-4">
           <img src="<?= $p["url_imagen_principal"] ?>" class="card-img-top" style="height: 200px; object-fit: cover;">
           <div class="card-body">
-            <h5 class="card-title"><?= $p["nombre_producto"] ?></h5>
+              <a href="producto.php?id=<?= urlencode($p["id_producto"]) ?>" class="text-decoration-none text-dark">
+                <?= htmlspecialchars($p["nombre_producto"]) ?>
+              </a>
+            </h5>
             <p class="card-text"><?= $p["descripcion"] ?></p>
             <p><strong>$<?= $p["precio_unitario"] ?></strong></p>
             <p>Stock: <?= $p["stock_actual"] ?></p>
