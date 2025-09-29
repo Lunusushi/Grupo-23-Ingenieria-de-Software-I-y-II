@@ -39,19 +39,11 @@ $cargo = $_SESSION["cargo"] ?? null;
       </ul>
 
       <!-- Campo de búsqueda adaptado a Bootstrap -->
-      <form id="search-form" class="d-flex position-relative" action="catalogo.php" method="GET">
-        <input 
-          type="text" 
-          id="search-input" 
-          name="q" 
-          class="form-control me-2"
-          placeholder="Buscar productos..." 
-          autocomplete="off"
-        >
-        <!-- Contenedor para las sugerencias -->
-        <div id="suggestions" class="list-group position-absolute w-100" style="top: 100%; z-index: 1000; display: none;"></div>
+      <form id="search-form" class="d-flex align-items-center position-relative my-2 my-lg-0" action="catalogo.php" method="GET">
+        <input type="text" id="search-input" name="q" class="form-control me-2" placeholder="Buscar productos..." autocomplete="off">
+        <div id="suggestions" class="list-group position-absolute w-100"
+            style="top: calc(100% + .25rem); z-index: 1000; display: none;"></div>
       </form>
-
       <ul class="navbar-nav ms-3">
         <?php if ($user): ?>
           <li class="nav-item d-flex align-items-center">

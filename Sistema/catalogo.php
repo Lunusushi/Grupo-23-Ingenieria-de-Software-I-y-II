@@ -11,6 +11,10 @@ $id_cliente = $_SESSION["usuario_id"] ?? 1;
 
 $categorias = ProductController::obtenerCategorias($conn);
 $id_categorias = $_GET["cat"] ?? [];
+if (!is_array($id_categorias)) {
+    $id_categorias = [$id_categorias];
+}
+
 $productos = ProductController::obtenerProductos($conn, $id_categorias);
 ?>
 
@@ -19,8 +23,8 @@ $productos = ProductController::obtenerProductos($conn, $id_categorias);
 <head>
   <meta charset="UTF-8">
   <title>Catálogo - Los Cobres</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="public/css/main.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
 
@@ -54,7 +58,6 @@ $productos = ProductController::obtenerProductos($conn, $id_categorias);
                 <?= htmlspecialchars($p["nombre_producto"]) ?>
               </a>
             </h5>
-            <p class="card-text"><?= $p["descripcion"] ?></p>
             <p><strong>$<?= $p["precio_unitario"] ?></strong></p>
             <p>Stock: <?= $p["stock_actual"] ?></p>
 
