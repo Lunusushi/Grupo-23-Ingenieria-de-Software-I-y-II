@@ -19,6 +19,7 @@ $cargo = $_SESSION["cargo"] ?? null;
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <!-- Disponible para todos -->
         <li class="nav-item"><a class="nav-link" href="catalogo.php">Catálogo</a></li>
+        <li class="nav-item"><a class="nav-link" href="carrito.php">Carrito</a></li>
 
         <?php if ($userType === 'cliente'): ?>
           <li class="nav-item"><a class="nav-link" href="carrito.php">Carrito</a></li>

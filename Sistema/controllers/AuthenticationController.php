@@ -42,7 +42,11 @@ class AuthenticationController {
                     'email' => $user['email'],
                     'type' => 'cliente'
                 ];
+                // fusionar carrito guest → carrito del cliente
+                require_once __DIR__ . '/ClientController.php';
+                ClientController::fusionarCarritoInvitadoConCliente($conn, $user['id_usuario']);
                 return true;
+
             }
         }
 
