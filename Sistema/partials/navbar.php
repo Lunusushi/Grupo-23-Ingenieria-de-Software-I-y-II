@@ -4,8 +4,8 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 $user = $_SESSION["user"] ?? null;
-$userType = $_SESSION["user_type"] ?? null;
-$cargo = $_SESSION["cargo"] ?? null;
+$userType  = $_SESSION['user']['type'] ?? ($_SESSION['user_type'] ?? null);
+$cargo     = $_SESSION['user']['cargo'] ?? ($_SESSION['cargo'] ?? null);
 ?>
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
@@ -44,10 +44,15 @@ $cargo = $_SESSION["cargo"] ?? null;
         <div id="suggestions" class="list-group position-absolute w-100"
             style="top: calc(100% + .25rem); z-index: 1000; display: none;"></div>
       </form>
-      <ul class="navbar-nav ms-3">
+      <ul class="navbar-nav">
         <?php if ($user): ?>
+          <?php if ($userType === 'cliente'): ?>
+            <li class="nav-item"><a class="nav-link" href="perfil.php">Perfil</a></li>
+            <li class="nav-item"><a class="nav-link" href="direcciones.php">Mis direcciones</a></li>
+            <li class="nav-item"><a class="nav-link" href="historial.php">Historial</a></li>
+          <?php endif; ?>
           <li class="nav-item d-flex align-items-center">
-            <span class="me-3 text-white">Hola, <?= htmlspecialchars($user['name']) ?></span>
+            <span class="me-3 text-white"><?= htmlspecialchars($user['name']) ?></span>
             <a class="nav-link text-danger" href="logout.php">Cerrar sesión</a>
           </li>
         <?php else: ?>
@@ -60,36 +65,36 @@ $cargo = $_SESSION["cargo"] ?? null;
 </nav>
 
 <script>
-const searchInput = document.getElementById('search-input');
-const suggestionsBox = document.getElementById('suggestions');
+  const searchInput = document.getElementById('search-input');
+  const suggestionsBox = document.getElementById('suggestions');
 
-searchInput.addEventListener('input', () => {
-    const query = searchInput.value.trim();
-    if (query.length === 0) {
-        suggestionsBox.innerHTML = '';
-        suggestionsBox.style.display = "none";
-        return;
-    }
+  searchInput.addEventListener('input', () => {
+      const query = searchInput.value.trim();
+      if (query.length === 0) {
+          suggestionsBox.innerHTML = '';
+          suggestionsBox.style.display = "none";
+          return;
+      }
 
-    fetch(`controllers/productController.php?action=buscar&q=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(products => {
-            suggestionsBox.innerHTML = '';
-            products.forEach(product => {
-              const item = document.createElement('a');
-              item.href = `producto.php?id=${product.id_producto}`;
-              item.textContent = product.nombre_producto;
-              item.classList.add('list-group-item', 'list-group-item-action');
-              suggestionsBox.appendChild(item);
-            });
-            suggestionsBox.style.display = products.length ? 'block' : 'none';
-        });
-});
+      fetch(`controllers/productController.php?action=buscar&q=${encodeURIComponent(query)}`)
+          .then(response => response.json())
+          .then(products => {
+              suggestionsBox.innerHTML = '';
+              products.forEach(product => {
+                const item = document.createElement('a');
+                item.href = `producto.php?id=${product.id_producto}`;
+                item.textContent = product.nombre_producto;
+                item.classList.add('list-group-item', 'list-group-item-action');
+                suggestionsBox.appendChild(item);
+              });
+              suggestionsBox.style.display = products.length ? 'block' : 'none';
+          });
+  });
 
-document.addEventListener('click', (e) => {
-    if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
-        suggestionsBox.innerHTML = '';
-        suggestionsBox.style.display = 'none';
-    }
-});
+  document.addEventListener('click', (e) => {
+      if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+          suggestionsBox.innerHTML = '';
+          suggestionsBox.style.display = 'none';
+      }
+  });
 </script>
