@@ -22,7 +22,6 @@ $cargo = $_SESSION["cargo"] ?? null;
         <li class="nav-item"><a class="nav-link" href="carrito.php">Carrito</a></li>
 
         <?php if ($userType === 'cliente'): ?>
-          <li class="nav-item"><a class="nav-link" href="carrito.php">Carrito</a></li>
           <li class="nav-item"><a class="nav-link" href="favoritos.php">Favoritos</a></li>
           <li class="nav-item"><a class="nav-link" href="realizar_pedido.php">Pedido</a></li>
 
