@@ -7,6 +7,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+if (!isset($_SESSION['user']) || $_SESSION['user']['type'] !== 'operador') { header('Location: login.php'); exit; }
+
+
 $usuarios = UserController::obtenerUsuarios($conn);
 $operadores = UserController::obtenerOperadores($conn);
 $mensaje = "";

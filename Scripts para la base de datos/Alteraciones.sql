@@ -1,3 +1,5 @@
+USE loscobres_db;
+
 -- Carrito puede ser de cliente o invitado (vía token de sesión)
 ALTER TABLE CARRITO_COMPRA
   MODIFY id_cliente INT NULL,

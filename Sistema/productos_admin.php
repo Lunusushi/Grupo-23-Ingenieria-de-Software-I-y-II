@@ -8,6 +8,9 @@ $categorias = ProductController::obtenerCategorias($conn);
 $mensaje_error = "";
 $mensaje_exito = "";
 
+if (!isset($_SESSION['user']) || $_SESSION['user']['type'] !== 'operador') { header('Location: login.php'); exit; }
+
+
 // Agregar producto
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["nombre_producto"])) {
     ProductController::agregarProducto(

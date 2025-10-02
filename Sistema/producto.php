@@ -106,8 +106,8 @@ if (!isset($_GET['id']) || !ctype_digit($_GET['id'])) {
                 class="form-control"
                 value="1"
                 min="1"
-                max="<?= $stockEntero > 0 ? $stockEntero : null ?>"
                 step="1"
+                <?php if ($stockEntero > 0): ?>max="<?= (int)$stockEntero ?>"<?php endif; ?>
                 required
               >
               <button class="btn btn-success" type="submit">🛒 Agregar</button>
