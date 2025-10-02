@@ -257,48 +257,111 @@ class ClientController {
         return $carrito;
     }
 
-    public static function fusionarCarritoInvitadoConCliente(PDO $conn, int $id_usuario_cliente): void {
-        ensureSession();
-        if (empty($_SESSION['guest_token'])) return;
-        $token = $_SESSION['guest_token'];
+    public static function fusionarCarritoInvitadoConCliente(PDO $conn, int $id_usuario): void {
+        if (session_status() === PHP_SESSION_NONE) session_start();
 
-        // Carrito del invitado
-        $stmt = $conn->prepare("SELECT * FROM CARRITO_COMPRA WHERE session_token = ?");
-        $stmt->execute([$token]);
-        $carritoGuest = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$carritoGuest) return;
+        $guestToken = $_SESSION['guest_token'] ?? null;
+        if (!$guestToken) return;
 
-        // Carrito del cliente (crear si no existe)
-        $carritoCliente = self::obtenerCarritoUniversal($conn, $id_usuario_cliente);
+        // 1) Resolver id_cliente desde id_usuario
+        $stmt = $conn->prepare("SELECT id_cliente FROM CLIENTE WHERE id_usuario = ?");
+        $stmt->execute([$id_usuario]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) { unset($_SESSION['guest_token']); return; }
+        $id_cliente = (int)$row['id_cliente'];
 
-        // Items del invitado
-        $items = $conn->prepare("SELECT * FROM ITEM_CARRITO WHERE id_carrito = ?");
-        $items->execute([$carritoGuest['id_carrito']]);
-        $items = $items->fetchAll(PDO::FETCH_ASSOC);
+        $conn->beginTransaction();
+        try {
+            // 2) Carrito invitado por token
+            $stmt = $conn->prepare("SELECT * FROM CARRITO_COMPRA WHERE session_token = ? LIMIT 1");
+            $stmt->execute([$guestToken]);
+            $guestCart = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$guestCart) { $conn->commit(); unset($_SESSION['guest_token']); return; }
 
-        foreach ($items as $it) {
-            // ¿ya existe ese producto en el carrito del cliente?
-            $q = $conn->prepare("SELECT * FROM ITEM_CARRITO WHERE id_carrito = ? AND id_producto = ?");
-            $q->execute([$carritoCliente['id_carrito'], $it['id_producto']]);
-            $existente = $q->fetch(PDO::FETCH_ASSOC);
+            $guestId = (int)$guestCart['id_carrito'];
 
-            if ($existente) {
-                $nueva = $existente['cantidad'] + $it['cantidad'];
-                $up = $conn->prepare("UPDATE ITEM_CARRITO SET cantidad = ? WHERE id_item_carrito = ?");
-                $up->execute([$nueva, $existente['id_item_carrito']]);
+            // 3) ¿Cliente ya tiene carrito?
+            $stmt = $conn->prepare("SELECT * FROM CARRITO_COMPRA WHERE id_cliente = ? ORDER BY id_carrito DESC LIMIT 1");
+            $stmt->execute([$id_cliente]);
+            $clientCart = $stmt->fetch(PDO::FETCH_ASSOC);
+            $clientId   = $clientCart ? (int)$clientCart['id_carrito'] : null;
+
+            // 4) ¿El carrito invitado está referenciado por algún pedido?
+            $stmt = $conn->prepare("SELECT COUNT(*) FROM PEDIDO WHERE id_carrito = ?");
+            $stmt->execute([$guestId]);
+            $hasPedido = (int)$stmt->fetchColumn() > 0;
+
+            // Helper: mover items de un carrito a otro (sumando cantidades si ya existe el producto)
+            $moveItems = function(int $fromId, int $toId) use ($conn) {
+                // Traer items del origen
+                $s = $conn->prepare("SELECT id_producto, cantidad, precio_unitario_momento FROM ITEM_CARRITO WHERE id_carrito = ?");
+                $s->execute([$fromId]);
+                $items = $s->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($items as $it) {
+                    $idp   = (int)$it['id_producto'];
+                    $cant  = (float)$it['cantidad'];
+                    $ppu   = (float)$it['precio_unitario_momento']; // mantenemos precio capturado
+
+                    // ¿Existe ya en destino?
+                    $c = $conn->prepare("SELECT id_item_carrito, cantidad FROM ITEM_CARRITO WHERE id_carrito=? AND id_producto=?");
+                    $c->execute([$toId, $idp]);
+                    if ($row = $c->fetch(PDO::FETCH_ASSOC)) {
+                        $nuevaCant = (float)$row['cantidad'] + $cant;
+                        $u = $conn->prepare("UPDATE ITEM_CARRITO SET cantidad=? WHERE id_item_carrito=?");
+                        $u->execute([$nuevaCant, (int)$row['id_item_carrito']]);
+                    } else {
+                        $ins = $conn->prepare("INSERT INTO ITEM_CARRITO (id_carrito, id_producto, cantidad, precio_unitario_momento) VALUES (?,?,?,?)");
+                        $ins->execute([$toId, $idp, $cant, $ppu]);
+                    }
+                }
+            };
+
+            if ($hasPedido) {
+                // Caso A: carrito invitado usado en pedidos -> NO borrar ni reasignar
+                if ($clientId === null) {
+                    $ins = $conn->prepare("INSERT INTO CARRITO_COMPRA (id_cliente) VALUES (?)");
+                    $ins->execute([$id_cliente]);
+                    $clientId = (int)$conn->lastInsertId();
+                }
+
+                // mover items (si hubiera) y limpiar el carrito invitado
+                $moveItems($guestId, $clientId);
+
+                // borrar items del carrito invitado (la fila del carrito se conserva por FK con PEDIDO)
+                $delItems = $conn->prepare("DELETE FROM ITEM_CARRITO WHERE id_carrito = ?");
+                $delItems->execute([$guestId]);
+
+                // desvincular token del carrito invitado
+                $upd = $conn->prepare("UPDATE CARRITO_COMPRA SET session_token = NULL WHERE id_carrito = ?");
+                $upd->execute([$guestId]);
+
             } else {
-                $ins = $conn->prepare("INSERT INTO ITEM_CARRITO (id_carrito, id_producto, cantidad, precio_unitario_momento)
-                                    VALUES (?, ?, ?, ?)");
-                $ins->execute([$carritoCliente['id_carrito'], $it['id_producto'], $it['cantidad'], $it['precio_unitario_momento']]);
+                // Caso B: carrito invitado sin pedidos asociados -> podemos fusionar/borrar o reasignar
+                if ($clientId !== null && $clientId !== $guestId) {
+                    // fusionar items al carrito del cliente y borrar carrito invitado
+                    $moveItems($guestId, $clientId);
+
+                    $delItems = $conn->prepare("DELETE FROM ITEM_CARRITO WHERE id_carrito = ?");
+                    $delItems->execute([$guestId]);
+
+                    $delCart = $conn->prepare("DELETE FROM CARRITO_COMPRA WHERE id_carrito = ?");
+                    $delCart->execute([$guestId]);
+
+                } else {
+                    // El cliente no tiene carrito: reasignar el carrito invitado al cliente
+                    $upd = $conn->prepare("UPDATE CARRITO_COMPRA SET id_cliente = ?, session_token = NULL WHERE id_carrito = ?");
+                    $upd->execute([$id_cliente, $guestId]);
+                }
             }
+
+            $conn->commit();
+            unset($_SESSION['guest_token']);
+        } catch (\Throwable $e) {
+            $conn->rollBack();
+            // Repropaga para que lo veas en logs si algo raro pasa
+            throw $e;
         }
-
-        // Limpiar carrito invitado
-        $conn->prepare("DELETE FROM ITEM_CARRITO WHERE id_carrito = ?")->execute([$carritoGuest['id_carrito']]);
-        $conn->prepare("DELETE FROM CARRITO_COMPRA WHERE id_carrito = ?")->execute([$carritoGuest['id_carrito']]);
-
-        // borrar token
-        unset($_SESSION['guest_token']);
     }
 
     public static function realizarPedidoInvitado(PDO $conn, int $id_carrito, string $nombre, string $email, ?string $telefono, string $metodo_pago, string $lugar_retiro): string {
