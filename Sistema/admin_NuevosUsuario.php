@@ -68,8 +68,14 @@ if ($action === 'create') {
     }
 }
 
-// Fetch all users
-$stmt = $conn->prepare("SELECT id_usuario, nombre, apellido, email FROM USUARIO ORDER BY id_usuario DESC");
+// Fetch all users who are not clients (operators only)
+$stmt = $conn->prepare("
+    SELECT u.id_usuario, u.nombre, u.apellido, u.email
+    FROM USUARIO u
+    LEFT JOIN CLIENTE c ON u.id_usuario = c.id_usuario
+    WHERE c.id_usuario IS NULL
+    ORDER BY u.id_usuario DESC
+");
 $stmt->execute();
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
