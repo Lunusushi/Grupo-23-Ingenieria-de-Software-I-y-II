@@ -13,6 +13,12 @@ class ProductController {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public static function obtenerProductoById($conn, $id_producto) {
+        $stmt = $conn->prepare("SELECT * FROM PRODUCTO WHERE id_producto = ?");
+        $stmt->execute([$id_producto]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     public static function obtenerCategorias($conn) {
         $stmt = $conn->query("SELECT * FROM CATEGORIA");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -23,6 +29,13 @@ class ProductController {
             (nombre_producto, descripcion, precio_unitario, stock_actual, url_imagen_principal, activo, id_categoria)
             VALUES (?, ?, ?, ?, ?, 1, ?)");
         $stmt->execute([$nombre, $desc, $precio, $stock, $url, $id_categoria]);
+    }
+
+    public static function editarProducto($conn, $id_producto, $nombre, $desc, $precio, $stock, $url, $id_categoria) {
+        $stmt = $conn->prepare("UPDATE PRODUCTO SET
+            nombre_producto = ?, descripcion = ?, precio_unitario = ?, stock_actual = ?, url_imagen_principal = ?, id_categoria = ?
+            WHERE id_producto = ?");
+        $stmt->execute([$nombre, $desc, $precio, $stock, $url, $id_categoria, $id_producto]);
     }
 
     public static function eliminarProducto($conn, $id_producto) {
