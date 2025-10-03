@@ -253,6 +253,120 @@ class ProductController {
     }
 }
 
+class PlantillaController {
+    public static function obtenerPlantillas(PDO $conn): array {
+        $sql = "
+          SELECT p.*, c.nombre_categoria,
+                 c.activa AS categoria_activa
+          FROM PRODUCTO_PLANTILLA p
+          LEFT JOIN CATEGORIA c ON c.id_categoria = p.id_categoria
+          ORDER BY p.id_plantilla DESC
+        ";
+        return $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function obtenerPlantillaById(PDO $conn, int $id): ?array {
+        $stmt = $conn->prepare("
+          SELECT p.*, c.nombre_categoria, c.activa AS categoria_activa
+          FROM PRODUCTO_PLANTILLA p
+          LEFT JOIN CATEGORIA c ON c.id_categoria = p.id_categoria
+          WHERE p.id_plantilla = ?
+          LIMIT 1
+        ");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    public static function crearPlantilla(
+        PDO $conn,
+        string $nombre_plantilla,
+        ?int $id_categoria,
+        ?string $nombre_sugerido,
+        ?string $descripcion_sugerida,
+        ?float $precio_por_defecto,
+        ?string $url_imagen_por_defecto,
+        bool $es_nuevo_def,
+        bool $es_oferta_def,
+        bool $es_popular_def,
+        bool $activa
+    ): void {
+        $stmt = $conn->prepare("
+          INSERT INTO PRODUCTO_PLANTILLA
+          (nombre_plantilla, id_categoria, nombre_sugerido, descripcion_sugerida,
+           precio_por_defecto, url_imagen_por_defecto, es_nuevo_def, es_oferta_def,
+           es_popular_def, activa)
+          VALUES
+          (:np, :idc, :ns, :ds, :ppd, :img, :n, :o, :pop, :act)
+        ");
+        $stmt->execute([
+            ':np'  => $nombre_plantilla,
+            ':idc' => $id_categoria ?: null,
+            ':ns'  => $nombre_sugerido ?: null,
+            ':ds'  => $descripcion_sugerida ?: null,
+            ':ppd' => $precio_por_defecto !== null ? $precio_por_defecto : null,
+            ':img' => $url_imagen_por_defecto ?: null,
+            ':n'   => $es_nuevo_def ? 1 : 0,
+            ':o'   => $es_oferta_def ? 1 : 0,
+            ':pop' => $es_popular_def ? 1 : 0,
+            ':act' => $activa ? 1 : 0,
+        ]);
+    }
+
+    public static function editarPlantilla(
+        PDO $conn,
+        int $id_plantilla,
+        string $nombre_plantilla,
+        ?int $id_categoria,
+        ?string $nombre_sugerido,
+        ?string $descripcion_sugerida,
+        ?float $precio_por_defecto,
+        ?string $url_imagen_por_defecto,
+        bool $es_nuevo_def,
+        bool $es_oferta_def,
+        bool $es_popular_def,
+        bool $activa
+    ): void {
+        $stmt = $conn->prepare("
+          UPDATE PRODUCTO_PLANTILLA SET
+            nombre_plantilla = :np,
+            id_categoria = :idc,
+            nombre_sugerido = :ns,
+            descripcion_sugerida = :ds,
+            precio_por_defecto = :ppd,
+            url_imagen_por_defecto = :img,
+            es_nuevo_def = :n,
+            es_oferta_def = :o,
+            es_popular_def = :pop,
+            activa = :act
+          WHERE id_plantilla = :id
+        ");
+        $stmt->execute([
+            ':np'  => $nombre_plantilla,
+            ':idc' => $id_categoria ?: null,
+            ':ns'  => $nombre_sugerido ?: null,
+            ':ds'  => $descripcion_sugerida ?: null,
+            ':ppd' => $precio_por_defecto !== null ? $precio_por_defecto : null,
+            ':img' => $url_imagen_por_defecto ?: null,
+            ':n'   => $es_nuevo_def ? 1 : 0,
+            ':o'   => $es_oferta_def ? 1 : 0,
+            ':pop' => $es_popular_def ? 1 : 0,
+            ':act' => $activa ? 1 : 0,
+            ':id'  => $id_plantilla
+        ]);
+    }
+
+    public static function eliminarPlantilla(PDO $conn, int $id): void {
+        $stmt = $conn->prepare("DELETE FROM PRODUCTO_PLANTILLA WHERE id_plantilla = ?");
+        $stmt->execute([$id]);
+    }
+
+    public static function setActiva(PDO $conn, int $id, bool $activa): void {
+        $stmt = $conn->prepare("UPDATE PRODUCTO_PLANTILLA SET activa = :a WHERE id_plantilla = :id");
+        $stmt->execute([':a' => $activa ? 1 : 0, ':id' => $id]);
+    }
+}
+
 if (isset($_GET['action']) && $_GET['action'] === 'buscar' && isset($_GET['q'])) {
     ProductController::buscarProductosJSON($conn, $_GET['q']);
 }
