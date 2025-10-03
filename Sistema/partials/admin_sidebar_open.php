@@ -54,18 +54,18 @@ if ($userType !== 'operador' || !$cargo) {
     <div class="offcanvas-body d-flex flex-column">
       <ul class="nav nav-pills flex-column mb-3">
         <?php if ($cargo === 'administrador' || $cargo === 'mantenedor'): ?>
-          <li class="nav-item"><a class="nav-link text-white" href="admin_index.php"       data-bs-dismiss="offcanvas">📊 Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="verificar_pedido.php"  data-bs-dismiss="offcanvas">🧾 Verificar Pedido</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="admin_productos.php"   data-bs-dismiss="offcanvas">📦 Admin Productos</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="admin_categorias.php"  data-bs-dismiss="offcanvas">🗂 Categorías</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="admin_promos.php"      data-bs-dismiss="offcanvas">🎯 Promos Home</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="admin_permisos.php"    data-bs-dismiss="offcanvas">🔐 Permisos</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="admin_index.php"       >📊 Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="verificar_pedido.php"  >🧾 Verificar Pedido</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="admin_productos.php"   >📦 Admin Productos</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="admin_categorias.php"  >🗂 Categorías</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="admin_promos.php"      >🎯 Promos Home</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="admin_permisos.php"    >🔐 Permisos</a></li>
         <?php elseif ($cargo === 'catalogo'): ?>
-          <li class="nav-item"><a class="nav-link text-white" href="admin_productos.php"   data-bs-dismiss="offcanvas">📦 Admin Productos</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="admin_categorias.php"  data-bs-dismiss="offcanvas">🗂 Categorías</a></li>
-          <li class="nav-item"><a class="nav-link text-white" href="admin_promos.php"      data-bs-dismiss="offcanvas">🎯 Promos Home</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="admin_productos.php"   >📦 Admin Productos</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="admin_categorias.php"  >🗂 Categorías</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="admin_promos.php"      >🎯 Promos Home</a></li>
         <?php elseif ($cargo === 'caja'): ?>
-          <li class="nav-item"><a class="nav-link text-white" href="verificar_pedido.php"  data-bs-dismiss="offcanvas">🧾 Verificar Pedido</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="verificar_pedido.php"  >🧾 Verificar Pedido</a></li>
         <?php endif; ?>
       </ul>
 
@@ -111,6 +111,23 @@ if ($userType !== 'operador' || !$cargo) {
     if (!input.contains(e.target) && !box.contains(e.target)) {
       box.style.display='none'; box.innerHTML='';
     }
+  });
+})();
+</script>
+<script>
+(function(){
+  // Cierra el offcanvas cuando se hace click en un link del menú
+  const sidebarEl = document.getElementById('adminSidebar');
+  const navList   = document.getElementById('adminNavList');
+  if (!sidebarEl || !navList) return;
+
+  const offc = bootstrap.Offcanvas.getOrCreateInstance(sidebarEl);
+
+  navList.querySelectorAll('a.nav-link[href]').forEach(a => {
+    a.addEventListener('click', () => {
+      // No impedimos la navegación; sólo cerramos el panel en segundo plano
+      try { offc.hide(); } catch(e) {}
+    });
   });
 })();
 </script>
