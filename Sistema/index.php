@@ -3,7 +3,6 @@
   require_once __DIR__ . '/config/MySqlDb.php';
   require_once __DIR__ . '/controllers/ProductController.php';
 
-  $promos = ProductController::obtenerPromosHome($conn, 5);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -90,47 +89,6 @@
           </div>
         </div>
         <!-- /Carrusel -->
-
-        <hr class="my-4">
-
-        <div class="carousel-container">
-          <?php if (!empty($promos)): ?>
-            <div id="carouselPromos" class="carousel slide carousel-fade" data-bs-ride="carousel">
-              <div class="carousel-indicators">
-                <?php foreach ($promos as $i => $_): ?>
-                  <button type="button" data-bs-target="#carouselPromos" data-bs-slide-to="<?= $i ?>" class="<?= $i===0?'active':'' ?>"></button>
-                <?php endforeach; ?>
-              </div>
-              <div class="carousel-inner">
-                <?php foreach ($promos as $i => $ph): 
-                  $img = $ph['imagen_url'] ?: $ph['url_imagen_principal'];
-                  $title = $ph['titulo'] ?: $ph['nombre_producto'];
-                  $sub   = $ph['subtitulo'] ?: ('$'.number_format((float)$ph['precio_unitario'],0,',','.'));
-                ?>
-                  <div class="carousel-item <?= $i===0?'active':'' ?>">
-                    <a href="producto.php?id=<?= (int)$ph['id_producto'] ?>" class="d-block position-relative">
-                      <img src="<?= htmlspecialchars($img) ?>" class="w-100" style="height:500px;object-fit:cover" alt="<?= htmlspecialchars($title) ?>">
-                      <div class="carousel-caption d-none d-md-block" style="background:rgba(0,0,0,0.4);border-radius:.25rem;">
-                        <h5><?= htmlspecialchars($title) ?></h5>
-                        <p><?= htmlspecialchars($sub) ?></p>
-                      </div>
-                    </a>
-                  </div>
-                <?php endforeach; ?>
-              </div>
-              <button class="carousel-control-prev" type="button" data-bs-target="#carouselPromos" data-bs-slide="prev">
-                <span class="carousel-control-prev-icon"></span>
-                <span class="visually-hidden">Anterior</span>
-              </button>
-              <button class="carousel-control-next" type="button" data-bs-target="#carouselPromos" data-bs-slide="next">
-                <span class="carousel-control-next-icon"></span>
-                <span class="visually-hidden">Siguiente</span>
-              </button>
-            </div>
-          <?php else: ?>
-            <!-- Fallback: tu carrusel actual tal cual -->
-            <!-- pega aquí tu carrusel estático existente -->
-          <?php endif; ?>
         </div>
       </div>
     </div>
