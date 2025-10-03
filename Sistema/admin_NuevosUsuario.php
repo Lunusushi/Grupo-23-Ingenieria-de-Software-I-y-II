@@ -145,7 +145,9 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <td class="align-middle">
                                 <input type="password" class="form-control form-control-sm mb-1" name="password" placeholder="Nueva contraseña" />
                                 <button type="submit" name="action" value="update" class="btn btn-sm btn-primary me-1">Actualizar</button>
+                                <?php if (isset($_SESSION['user']['id']) && $_SESSION['user']['id'] != $user['id_usuario']): ?>
                                 <button type="submit" name="action" value="delete" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de eliminar este usuario?');">Eliminar</button>
+                                <?php endif; ?>
                             </td>
                         </form>
                     </tr>
