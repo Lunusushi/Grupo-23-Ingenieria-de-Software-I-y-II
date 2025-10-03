@@ -14,7 +14,7 @@ if (session_status() === PHP_SESSION_NONE) {
 </head>
 <body>
 
-  <?php include __DIR__ . '/partials/navbar.php'; ?>
+  <?php include __DIR__ . '/partials/admin_sidebar_open.php';?>
 
   <div class="container mt-5">
     <div class="text-center">
@@ -23,5 +23,6 @@ if (session_status() === PHP_SESSION_NONE) {
       <hr class="my-4">
     </div>
   </div>
+<?php include __DIR__ . '/partials/admin_sidebar_close.php'; // cierra main + flex ?>
 </body>
 </html>

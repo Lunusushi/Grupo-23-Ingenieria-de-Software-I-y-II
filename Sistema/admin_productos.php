@@ -1,42 +1,42 @@
-<?php
-require_once 'config/MySqlDb.php';
-require_once 'controllers/ProductController.php';
-require_once 'partials/navbar.php';
-
-$categorias = ProductController::obtenerCategorias($conn);
-
-$mensaje_error = "";
-$mensaje_exito = "";
-
-if (!isset($_SESSION['user']) || $_SESSION['user']['type'] !== 'operador') { header('Location: login.php'); exit; }
-
-
-// Agregar producto
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["nombre_producto"])) {
-    ProductController::agregarProducto(
-        $conn,
-        $_POST["nombre_producto"],
-        $_POST["descripcion"],
-        $_POST["precio_unitario"],
-        $_POST["stock_actual"],
-        $_POST["url_imagen_principal"],
-        $_POST["id_categoria"]
-    );
-    $mensaje_exito = "✅ Producto agregado correctamente.";
-}
-
-// Eliminar producto
-if (isset($_GET["eliminar"])) {
-    $resultado = ProductController::eliminarProducto($conn, $_GET["eliminar"]);
-
-    if (is_string($resultado)) {
-        $mensaje_error = $resultado;
-    } else {
-        $mensaje_exito = "✅ Producto eliminado exitosamente.";
+<?php    
+  if (session_status() === PHP_SESSION_NONE) {
+      session_start();
     }
-}
+  if (!isset($_SESSION['user']) || $_SESSION['user']['type'] !== 'operador') { header('Location: login.php'); exit; }
+  require_once 'config/MySqlDb.php';
+  require_once 'controllers/ProductController.php';
 
-$productos = ProductController::obtenerProductos($conn);
+  $categorias = ProductController::obtenerCategorias($conn);
+
+  $mensaje_error = "";
+  $mensaje_exito = "";
+
+  // Agregar producto
+  if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["nombre_producto"])) {
+      ProductController::agregarProducto(
+          $conn,
+          $_POST["nombre_producto"],
+          $_POST["descripcion"],
+          $_POST["precio_unitario"],
+          $_POST["stock_actual"],
+          $_POST["url_imagen_principal"],
+          $_POST["id_categoria"]
+      );
+      $mensaje_exito = "✅ Producto agregado correctamente.";
+  }
+
+  // Eliminar producto
+  if (isset($_GET["eliminar"])) {
+      $resultado = ProductController::eliminarProducto($conn, $_GET["eliminar"]);
+
+      if (is_string($resultado)) {
+          $mensaje_error = $resultado;
+      } else {
+          $mensaje_exito = "✅ Producto eliminado exitosamente.";
+      }
+  }
+
+  $productos = ProductController::obtenerProductos($conn);
 ?>
 
 <!DOCTYPE html>
@@ -48,7 +48,7 @@ $productos = ProductController::obtenerProductos($conn);
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
-
+<?php include __DIR__ . '/partials/admin_sidebar_open.php';?>
 <div class="container mt-4">
   <h2 class="mb-4">🛠️ Administrar Productos</h2>
 
@@ -96,6 +96,6 @@ $productos = ProductController::obtenerProductos($conn);
     <?php endforeach; ?>
   </div>
 </div>
-
+<?php include __DIR__ . '/partials/admin_sidebar_close.php'; // cierra main + flex ?>
 </body>
 </html>

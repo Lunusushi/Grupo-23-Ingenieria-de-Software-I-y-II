@@ -7,7 +7,6 @@
 
   require_once 'config/MySqlDb.php';
   require_once 'controllers/ClientController.php';
-  require_once 'partials/navbar.php'; // Incluyo el navbar común
 
   $pedido = null;
   $detalles = [];
@@ -34,7 +33,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
-
+<?php include __DIR__ . '/partials/admin_sidebar_open.php';?>
 <div class="container mt-4">
   <h2 class="mb-4">🔎 Verificar Pedido por Código</h2>
 
@@ -69,6 +68,6 @@
     </div>
   <?php endif; ?>
 </div>
-
+<?php include __DIR__ . '/partials/admin_sidebar_close.php'; // cierra main + flex ?>
 </body>
 </html>
