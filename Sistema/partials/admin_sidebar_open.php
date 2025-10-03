@@ -52,7 +52,7 @@ if ($userType !== 'operador' || !$cargo) {
     </div>
 
     <div class="offcanvas-body d-flex flex-column">
-      <ul class="nav nav-pills flex-column mb-3">
+      <ul class="nav nav-pills flex-column mb-3" id="adminNavList">
         <?php if ($cargo === 'administrador' || $cargo === 'mantenedor'): ?>
           <li class="nav-item"><a class="nav-link text-white" href="admin_index.php"       >📊 Dashboard</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="verificar_pedido.php"  >🧾 Verificar Pedido</a></li>
@@ -114,6 +114,7 @@ if ($userType !== 'operador' || !$cargo) {
   });
 })();
 </script>
+
 <script>
 (function(){
   // Cierra el offcanvas cuando se hace click en un link del menú
@@ -125,9 +126,21 @@ if ($userType !== 'operador' || !$cargo) {
 
   navList.querySelectorAll('a.nav-link[href]').forEach(a => {
     a.addEventListener('click', () => {
-      // No impedimos la navegación; sólo cerramos el panel en segundo plano
       try { offc.hide(); } catch(e) {}
     });
+  });
+})();
+</script>
+
+<!-- Opcional: resaltar link activo -->
+<script>
+(function(){
+  const list = document.getElementById('adminNavList');
+  if (!list) return;
+  const here = location.pathname.split('/').pop().toLowerCase();
+  list.querySelectorAll('a.nav-link[href]').forEach(a => {
+    const target = a.getAttribute('href').split('/').pop().toLowerCase();
+    if (target === here) a.classList.add('active');
   });
 })();
 </script>
