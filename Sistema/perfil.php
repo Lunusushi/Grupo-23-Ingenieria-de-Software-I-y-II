@@ -1,106 +1,106 @@
 <?php
-// perfil.php
-if (session_status() === PHP_SESSION_NONE) session_start();
-if (
-  empty($_SESSION['user']) ||
-  ($_SESSION['user']['type'] ?? ($_SESSION['user_type'] ?? null)) !== 'cliente'
-) {
-    // Opción A: redirigir a inicio
-    header('Location: index.php');
-    exit;
-}
-require_once __DIR__ . '/config/MySqlDb.php';
-require_once __DIR__ . '/partials/navbar.php';
+  // perfil.php
+  if (session_status() === PHP_SESSION_NONE) session_start();
+  if (
+    empty($_SESSION['user']) ||
+    ($_SESSION['user']['type'] ?? ($_SESSION['user_type'] ?? null)) !== 'cliente'
+  ) {
+      // Opción A: redirigir a inicio
+      header('Location: index.php');
+      exit;
+  }
+  require_once __DIR__ . '/config/MySqlDb.php';
+  require_once __DIR__ . '/partials/navbar.php';
 
-$userId = (int)$_SESSION['user']['id'];
+  $userId = (int)$_SESSION['user']['id'];
 
-// 1) Traer datos actuales del usuario (por si avatar/cover cambiaron fuera de sesión)
-$stmt = $conn->prepare("SELECT id_usuario, nombre, telefono, avatar_url, cover_url FROM USUARIO WHERE id_usuario = ?");
-$stmt->execute([$userId]);
-$u = $stmt->fetch(PDO::FETCH_ASSOC);
-if (!$u) { http_response_code(404); die("Usuario no encontrado."); }
+  // 1) Traer datos actuales del usuario (por si avatar/cover cambiaron fuera de sesión)
+  $stmt = $conn->prepare("SELECT id_usuario, nombre, telefono, avatar_url, cover_url FROM USUARIO WHERE id_usuario = ?");
+  $stmt->execute([$userId]);
+  $u = $stmt->fetch(PDO::FETCH_ASSOC);
+  if (!$u) { http_response_code(404); die("Usuario no encontrado."); }
 
-$mensaje = "";
-$error   = "";
+  $mensaje = "";
+  $error   = "";
 
-// 2) Helper para subir imagen
-function subir_imagen(array $file, string $dir, string $prefix, int $maxBytes = 2_000_000) {
-    if (empty($file['tmp_name']) || $file['error'] !== UPLOAD_ERR_OK) return [null, null];
+  // 2) Helper para subir imagen
+  function subir_imagen(array $file, string $dir, string $prefix, int $maxBytes = 2_000_000) {
+      if (empty($file['tmp_name']) || $file['error'] !== UPLOAD_ERR_OK) return [null, null];
 
-    // Validar tamaño
-    if ($file['size'] > $maxBytes) {
-        throw new RuntimeException("La imagen supera el límite de " . number_format($maxBytes/1024/1024, 1) . " MB.");
-    }
+      // Validar tamaño
+      if ($file['size'] > $maxBytes) {
+          throw new RuntimeException("La imagen supera el límite de " . number_format($maxBytes/1024/1024, 1) . " MB.");
+      }
 
-    // Validar mime
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mime  = $finfo->file($file['tmp_name']);
-    $ext   = match($mime) {
-        'image/jpeg' => 'jpg',
-        'image/png'  => 'png',
-        'image/webp' => 'webp',
-        default      => null
-    };
-    if (!$ext) {
-        throw new RuntimeException("Formato de imagen no permitido. Usa JPG/PNG/WEBP.");
-    }
+      // Validar mime
+      $finfo = new finfo(FILEINFO_MIME_TYPE);
+      $mime  = $finfo->file($file['tmp_name']);
+      $ext   = match($mime) {
+          'image/jpeg' => 'jpg',
+          'image/png'  => 'png',
+          'image/webp' => 'webp',
+          default      => null
+      };
+      if (!$ext) {
+          throw new RuntimeException("Formato de imagen no permitido. Usa JPG/PNG/WEBP.");
+      }
 
-    // Asegurar directorio
-    if (!is_dir($dir)) {
-        if (!mkdir($dir, 0775, true)) throw new RuntimeException("No se pudo crear el directorio de subida.");
-    }
+      // Asegurar directorio
+      if (!is_dir($dir)) {
+          if (!mkdir($dir, 0775, true)) throw new RuntimeException("No se pudo crear el directorio de subida.");
+      }
 
-    // Nombre de archivo
-    $fname = $prefix . '-' . time() . '-' . bin2hex(random_bytes(4)) . '.' . $ext;
-    $dest  = rtrim($dir, '/\\') . '/' . $fname;
+      // Nombre de archivo
+      $fname = $prefix . '-' . time() . '-' . bin2hex(random_bytes(4)) . '.' . $ext;
+      $dest  = rtrim($dir, '/\\') . '/' . $fname;
 
-    if (!move_uploaded_file($file['tmp_name'], $dest)) {
-        throw new RuntimeException("No se pudo guardar la imagen en el servidor.");
-    }
+      if (!move_uploaded_file($file['tmp_name'], $dest)) {
+          throw new RuntimeException("No se pudo guardar la imagen en el servidor.");
+      }
 
-    // Retorna ruta relativa usable en <img src="...">
-    return [$dest, $mime];
-}
+      // Retorna ruta relativa usable en <img src="...">
+      return [$dest, $mime];
+  }
 
-// 3) Procesar formulario
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        $nombre   = trim($_POST['nombre']   ?? $u['nombre']   ?? '');
-        $telefono = trim($_POST['telefono'] ?? $u['telefono'] ?? '');
+  // 3) Procesar formulario
+  if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+      try {
+          $nombre   = trim($_POST['nombre']   ?? $u['nombre']   ?? '');
+          $telefono = trim($_POST['telefono'] ?? $u['telefono'] ?? '');
 
-        $avatar_url = $u['avatar_url'] ?? null;
-        $cover_url  = $u['cover_url']  ?? null;
+          $avatar_url = $u['avatar_url'] ?? null;
+          $cover_url  = $u['cover_url']  ?? null;
 
-        // Avatar
-        if (!empty($_FILES['avatar']['tmp_name'])) {
-            [$path, $mime] = subir_imagen($_FILES['avatar'], __DIR__ . '/uploads/avatars', 'avatar-' . $userId);
-            // Guardar ruta relativa desde docroot (ajusta si tu docroot difiere)
-            $avatar_url = 'uploads/avatars/' . basename($path);
-        }
+          // Avatar
+          if (!empty($_FILES['avatar']['tmp_name'])) {
+              [$path, $mime] = subir_imagen($_FILES['avatar'], __DIR__ . '/uploads/avatars', 'avatar-' . $userId);
+              // Guardar ruta relativa desde docroot (ajusta si tu docroot difiere)
+              $avatar_url = 'uploads/avatars/' . basename($path);
+          }
 
-        // Portada
-        if (!empty($_FILES['cover']['tmp_name'])) {
-            [$path, $mime] = subir_imagen($_FILES['cover'], __DIR__ . '/uploads/covers', 'cover-' . $userId);
-            $cover_url = 'uploads/covers/' . basename($path);
-        }
+          // Portada
+          if (!empty($_FILES['cover']['tmp_name'])) {
+              [$path, $mime] = subir_imagen($_FILES['cover'], __DIR__ . '/uploads/covers', 'cover-' . $userId);
+              $cover_url = 'uploads/covers/' . basename($path);
+          }
 
-        // Actualizar en BD
-        $up = $conn->prepare("UPDATE USUARIO SET nombre=?, telefono=?, avatar_url=?, cover_url=? WHERE id_usuario=?");
-        $up->execute([$nombre, $telefono, $avatar_url, $cover_url, $userId]);
+          // Actualizar en BD
+          $up = $conn->prepare("UPDATE USUARIO SET nombre=?, telefono=?, avatar_url=?, cover_url=? WHERE id_usuario=?");
+          $up->execute([$nombre, $telefono, $avatar_url, $cover_url, $userId]);
 
-        // Refrescar datos
-        $stmt = $conn->prepare("SELECT id_usuario, nombre, telefono, avatar_url, cover_url FROM USUARIO WHERE id_usuario = ?");
-        $stmt->execute([$userId]);
-        $u = $stmt->fetch(PDO::FETCH_ASSOC);
+          // Refrescar datos
+          $stmt = $conn->prepare("SELECT id_usuario, nombre, telefono, avatar_url, cover_url FROM USUARIO WHERE id_usuario = ?");
+          $stmt->execute([$userId]);
+          $u = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Refrescar sesión (para que navbar muestre nombre actualizado)
-        $_SESSION['user']['name'] = $u['nombre'];
+          // Refrescar sesión (para que navbar muestre nombre actualizado)
+          $_SESSION['user']['name'] = $u['nombre'];
 
-        $mensaje = "✅ Perfil actualizado correctamente.";
-    } catch (Throwable $e) {
-        $error = "❌ " . $e->getMessage();
-    }
-}
+          $mensaje = "✅ Perfil actualizado correctamente.";
+      } catch (Throwable $e) {
+          $error = "❌ " . $e->getMessage();
+      }
+  }
 ?>
 
 <!DOCTYPE html>
@@ -126,7 +126,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
   </style>
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
+<main class="flex-grow-1">
 
 <div class="container my-4">
 
@@ -169,5 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 
 </div>
+</main>
+<?php include __DIR__ . '/partials/footer.php'; ?>
 </body>
 </html>

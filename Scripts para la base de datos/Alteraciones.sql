@@ -48,3 +48,18 @@ ALTER TABLE PRODUCTO
 -- Categorías visibles/activas (toggle)
 ALTER TABLE CATEGORIA
   ADD COLUMN activa BOOLEAN DEFAULT 1;
+
+-- PROMOS del Home / Carrusel manual
+CREATE TABLE IF NOT EXISTS PROMO_HOME (
+  id_promo     INT AUTO_INCREMENT PRIMARY KEY,
+  id_producto  INT NOT NULL,
+  titulo       VARCHAR(100) NULL,
+  subtitulo    VARCHAR(150) NULL,
+  imagen_url   TEXT NULL,           -- opcional (otra imagen distinta a la principal)
+  orden        INT DEFAULT 0,       -- menor = aparece antes
+  activo       BOOLEAN DEFAULT 1,
+  creado       DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (id_producto) REFERENCES PRODUCTO(id_producto)
+);
+
+CREATE INDEX idx_promo_home_activo_orden ON PROMO_HOME (activo, orden);

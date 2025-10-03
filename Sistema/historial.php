@@ -133,7 +133,8 @@
         }
     </style>
     </head>
-    <body>
+    <body class="d-flex flex-column min-vh-100">
+    <main class="flex-grow-1">
 
     <div class="container my-4">
     <h1 class="h4 mb-3">🧾 Historial de pedidos</h1>
@@ -254,5 +255,7 @@
         });
     });
     </script>
+    </main>
+    <?php include __DIR__ . '/partials/footer.php'; ?>
     </body>
 </html>

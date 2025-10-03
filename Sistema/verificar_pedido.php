@@ -1,28 +1,28 @@
 <?php
-session_start();
-if (!isset($_SESSION['user']['id'])) {
-    header("Location: login.php");
-    exit();
-}
+  session_start();
+  if (!isset($_SESSION['user']['id'])) {
+      header("Location: login.php");
+      exit();
+  }
 
-require_once 'config/MySqlDb.php';
-require_once 'controllers/ClientController.php';
-require_once 'partials/navbar.php'; // Incluyo el navbar común
+  require_once 'config/MySqlDb.php';
+  require_once 'controllers/ClientController.php';
+  require_once 'partials/navbar.php'; // Incluyo el navbar común
 
-$pedido = null;
-$detalles = [];
-$error = "";
+  $pedido = null;
+  $detalles = [];
+  $error = "";
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $codigo = trim($_POST["codigo"]);
-    $pedido = ClientController::buscarPedidoPorCodigo($conn, $codigo);
+  if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $codigo = trim($_POST["codigo"]);
+      $pedido = ClientController::buscarPedidoPorCodigo($conn, $codigo);
 
-    if ($pedido) {
-        $detalles = ClientController::detallesPedido($conn, $pedido["id_pedido"]);
-    } else {
-        $error = "❌ Pedido no encontrado.";
-    }
-}
+      if ($pedido) {
+          $detalles = ClientController::detallesPedido($conn, $pedido["id_pedido"]);
+      } else {
+          $error = "❌ Pedido no encontrado.";
+      }
+  }
 ?>
 
 <!DOCTYPE html>

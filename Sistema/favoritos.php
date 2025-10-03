@@ -7,7 +7,7 @@ if (!isset($_SESSION['user']['id'])) {
 
 require_once 'config/MySqlDb.php';
 require_once 'controllers/ClientController.php';
-require_once 'partials/navbar.php'; // Incluyo el navbar común
+require_once 'partials/navbar.php';
 
 $id_cliente = $_SESSION['user']['id'];
 $lista = ClientController::obtenerLista($conn, $id_cliente);
@@ -30,8 +30,8 @@ $favoritos = ClientController::obtenerFavoritos($conn, $id_lista);
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
-<body>
-
+<body class="d-flex flex-column min-vh-100">
+<main class="flex-grow-1">
 <div class="container mt-4">
   <h2 class="mb-4">⭐ Mis Favoritos</h2>
 
@@ -57,6 +57,7 @@ $favoritos = ClientController::obtenerFavoritos($conn, $id_lista);
       </div>
   <?php endif; ?>
 </div>
-
+</main>
+<?php include __DIR__ . '/partials/footer.php'; ?>
 </body>
 </html>

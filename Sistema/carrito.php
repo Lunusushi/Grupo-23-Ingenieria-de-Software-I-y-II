@@ -67,8 +67,8 @@ foreach ($items as $it) {
   <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-
+<body class="d-flex flex-column min-vh-100">
+<main class="flex-grow-1">
 <div class="container my-4">
   <h1 class="h3 mb-4">Tu carrito</h1>
 
@@ -156,5 +156,7 @@ foreach ($items as $it) {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</main>
+<?php include __DIR__ . '/partials/footer.php'; ?>
 </body>
 </html>

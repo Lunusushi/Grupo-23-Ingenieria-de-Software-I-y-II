@@ -140,8 +140,8 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
-<body>
-
+<body class="d-flex flex-column min-vh-100">
+<main class="flex-grow-1">
 <div class="container my-4">
   <h1 class="h4 mb-3">📍 Mis direcciones</h1>
 
@@ -303,5 +303,7 @@
   <?php endif; ?>
 
 </div>
+</main>
+<?php include __DIR__ . '/partials/footer.php'; ?>
 </body>
 </html>

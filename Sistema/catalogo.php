@@ -60,8 +60,8 @@ function buildQuery(array $extra = []) {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
-<body>
-
+<body class="d-flex flex-column min-vh-100">
+<main class="flex-grow-1">
 <div class="container my-4">
   <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
     <h2 class="mb-2">Catálogo de Productos</h2>
@@ -220,5 +220,7 @@ function buildQuery(array $extra = []) {
   <?php endif; ?>
 
 </div>
+</main>
+<?php include __DIR__ . '/partials/footer.php'; ?>
 </body>
 </html>
