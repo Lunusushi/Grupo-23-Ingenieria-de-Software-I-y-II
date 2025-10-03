@@ -7,8 +7,7 @@
       <div class="row g-4">
         <div class="col-12 col-md-4">
           <h6 class="text-uppercase">Los Cobres</h6>
-          <p class="small mb-1">Av. Ejemplo 123, Santiago</p>
-          <p class="small mb-1">+56 2 2345 6789</p>
+          <p class="small mb-1">Embajador Doussinague 1767, Vitacura, Chile</p>
           <p class="small mb-0">contacto@loscobres.cl</p>
         </div>
         <div class="col-6 col-md-4">

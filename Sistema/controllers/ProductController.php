@@ -13,16 +13,6 @@ class ProductController {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function obtenerProductosAdmin(PDO $conn): array {
-        $stmt = $conn->query("
-            SELECT id_producto, nombre_producto, descripcion, precio_unitario, stock_actual,
-                   url_imagen_principal, id_categoria, activo
-            FROM PRODUCTO
-            ORDER BY id_producto DESC
-        ");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
     public static function obtenerProductoById($conn, $id_producto) {
         $stmt = $conn->prepare("SELECT * FROM PRODUCTO WHERE id_producto = ?");
         $stmt->execute([$id_producto]);
@@ -31,6 +21,16 @@ class ProductController {
 
     public static function obtenerCategorias($conn) {
         $stmt = $conn->query("SELECT * FROM CATEGORIA");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function obtenerProductosAdmin(PDO $conn): array {
+        $stmt = $conn->query("
+            SELECT id_producto, nombre_producto, descripcion, precio_unitario, stock_actual,
+                   url_imagen_principal, id_categoria, activo
+            FROM PRODUCTO
+            ORDER BY id_producto DESC
+        ");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -168,6 +168,83 @@ class ProductController {
             'page'  => $page,
             'per'   => $per,
         ];
+    }
+
+    public static function obtenerCategoriasAdmin(PDO $conn): array {
+        // Incluye inactivas, padre y conteo de productos
+        $sql = "
+            SELECT c.id_categoria, c.nombre_categoria, c.descripcion_categoria, c.id_padre, c.activa,
+                   pcount.cnt AS num_productos,
+                   p.nombre_categoria AS nombre_padre
+            FROM CATEGORIA c
+            LEFT JOIN (
+                SELECT id_categoria, COUNT(*) AS cnt
+                FROM PRODUCTO
+                GROUP BY id_categoria
+            ) pcount ON pcount.id_categoria = c.id_categoria
+            LEFT JOIN CATEGORIA p ON p.id_categoria = c.id_padre
+            ORDER BY 
+                (c.id_padre IS NULL) DESC,
+                c.id_padre,
+                c.nombre_categoria
+        ";
+        $stmt = $conn->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function crearCategoria(PDO $conn, string $nombre, ?string $descripcion, ?int $id_padre, bool $activa = true): void {
+        $stmt = $conn->prepare("
+            INSERT INTO CATEGORIA (nombre_categoria, descripcion_categoria, id_padre, activa)
+            VALUES (:n, :d, :p, :a)
+        ");
+        $stmt->execute([
+            ':n' => $nombre,
+            ':d' => $descripcion ?: null,
+            ':p' => $id_padre ?: null,
+            ':a' => $activa ? 1 : 0,
+        ]);
+    }
+
+    public static function actualizarCategoria(PDO $conn, int $id_categoria, string $nombre, ?string $descripcion, ?int $id_padre): void {
+        $stmt = $conn->prepare("
+            UPDATE CATEGORIA
+            SET nombre_categoria = :n, descripcion_categoria = :d, id_padre = :p
+            WHERE id_categoria = :id
+        ");
+        $stmt->execute([
+            ':n'  => $nombre,
+            ':d'  => $descripcion ?: null,
+            ':p'  => $id_padre ?: null,
+            ':id' => $id_categoria,
+        ]);
+    }
+
+    public static function setCategoriaActiva(PDO $conn, int $id_categoria, bool $activa): void {
+        $stmt = $conn->prepare("UPDATE CATEGORIA SET activa = :a WHERE id_categoria = :id");
+        $stmt->execute([':a' => $activa ? 1 : 0, ':id' => $id_categoria]);
+    }
+
+    public static function eliminarCategoria(PDO $conn, int $id_categoria) {
+        // 1) ¿Tiene subcategorías?
+        $stmt = $conn->prepare("SELECT COUNT(*) FROM CATEGORIA WHERE id_padre = ?");
+        $stmt->execute([$id_categoria]);
+        $hijos = (int)$stmt->fetchColumn();
+        if ($hijos > 0) {
+            return "⚠️ No se puede borrar: la categoría tiene subcategorías.";
+        }
+
+        // 2) ¿Tiene productos asignados?
+        $stmt = $conn->prepare("SELECT COUNT(*) FROM PRODUCTO WHERE id_categoria = ?");
+        $stmt->execute([$id_categoria]);
+        $prods = (int)$stmt->fetchColumn();
+        if ($prods > 0) {
+            return "⚠️ No se puede borrar: hay productos asignados a esta categoría.";
+        }
+
+        // 3) Borrar
+        $stmt = $conn->prepare("DELETE FROM CATEGORIA WHERE id_categoria = ?");
+        $stmt->execute([$id_categoria]);
+        return true;
     }
 }
 
