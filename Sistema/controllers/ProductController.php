@@ -4,10 +4,22 @@ require_once __DIR__ . '/../config/MySqlDb.php';
 class ProductController {
     public static function obtenerProductos($conn, $id_categorias = []) {
         if (empty($id_categorias)) {
-            $stmt = $conn->query("SELECT * FROM PRODUCTO WHERE activo = 1");
+            $sql = "
+                SELECT p.*
+                FROM PRODUCTO p
+                INNER JOIN CATEGORIA c ON c.id_categoria = p.id_categoria AND c.activa = 1
+                WHERE p.activo = 1
+            ";
+            $stmt = $conn->query($sql);
         } else {
-            $in = implode(',', array_fill(0, count($id_categorias), '?'));
-            $stmt = $conn->prepare("SELECT * FROM PRODUCTO WHERE activo = 1 AND id_categoria IN ($in)");
+            $in  = implode(',', array_fill(0, count($id_categorias), '?'));
+            $sql = "
+                SELECT p.*
+                FROM PRODUCTO p
+                INNER JOIN CATEGORIA c ON c.id_categoria = p.id_categoria AND c.activa = 1
+                WHERE p.activo = 1 AND p.id_categoria IN ($in)
+            ";
+            $stmt = $conn->prepare($sql);
             $stmt->execute($id_categorias);
         }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -20,16 +32,18 @@ class ProductController {
     }
 
     public static function obtenerCategorias($conn) {
-        $stmt = $conn->query("SELECT * FROM CATEGORIA");
+        $stmt = $conn->query("SELECT * FROM CATEGORIA WHERE activa = 1 ORDER BY nombre_categoria");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public static function obtenerProductosAdmin(PDO $conn): array {
         $stmt = $conn->query("
-            SELECT id_producto, nombre_producto, descripcion, precio_unitario, stock_actual,
-                   url_imagen_principal, id_categoria, activo
-            FROM PRODUCTO
-            ORDER BY id_producto DESC
+            SELECT p.id_producto, p.nombre_producto, p.descripcion, p.precio_unitario, p.stock_actual,
+                p.url_imagen_principal, p.id_categoria, p.activo, p.es_nuevo, p.es_oferta, p.es_popular,
+                c.activa AS categoria_activa
+            FROM PRODUCTO p
+            LEFT JOIN CATEGORIA c ON c.id_categoria = p.id_categoria
+            ORDER BY p.id_producto DESC
         ");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -68,10 +82,14 @@ class ProductController {
     }
 
     public static function buscarProductos($conn, $keyword) {
-        $stmt = $conn->prepare("SELECT id_producto, nombre_producto, url_imagen_principal 
-                                FROM PRODUCTO 
-                                WHERE activo = 1 AND nombre_producto LIKE ?
-                                LIMIT 10"); //esta cosa ve el limite
+        $sql = "
+            SELECT p.id_producto, p.nombre_producto, p.url_imagen_principal
+            FROM PRODUCTO p
+            INNER JOIN CATEGORIA c ON c.id_categoria = p.id_categoria AND c.activa = 1
+            WHERE p.activo = 1 AND p.nombre_producto LIKE ?
+            LIMIT 10
+        ";
+        $stmt = $conn->prepare($sql);
         $stmt->execute(['%' . $keyword . '%']);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -90,7 +108,7 @@ class ProductController {
         $validSort = ['recientes','precio_asc','precio_desc','nombre'];
         if (!in_array($sort, $validSort, true)) $sort = 'recientes';
 
-        $where = ['p.activo = 1'];
+        $where = ['p.activo = 1']; // categoría activa va en el JOIN
         $args  = [];
 
         // Categorías
@@ -103,71 +121,58 @@ class ProductController {
             }
         }
 
-        // Rango de precio
-        if (isset($f['min']) && is_numeric($f['min'])) {
-            $where[] = "p.precio_unitario >= ?";
-            $args[]  = (float)$f['min'];
-        }
-        if (isset($f['max']) && is_numeric($f['max'])) {
-            $where[] = "p.precio_unitario <= ?";
-            $args[]  = (float)$f['max'];
-        }
+        // Precio
+        if (isset($f['min']) && is_numeric($f['min'])) { $where[]="p.precio_unitario >= ?"; $args[]=(float)$f['min']; }
+        if (isset($f['max']) && is_numeric($f['max'])) { $where[]="p.precio_unitario <= ?"; $args[]=(float)$f['max']; }
 
-        // Sólo disponibles (opcional, si lo estás pasando)
-        if (!empty($f['solo_disponibles'])) {
-            $where[] = "p.stock_actual > 0";
-        }
+        // Disponibles
+        if (!empty($f['solo_disponibles'])) { $where[]="p.stock_actual > 0"; }
 
-        // Búsqueda por keyword (nombre o descripción)
+        // Búsqueda
         if (!empty($f['q'])) {
-            $q = trim((string)$f['q']);
-            if ($q !== '') {
-                $like = '%' . $q . '%';
-                $where[] = "(p.nombre_producto LIKE ? OR p.descripcion LIKE ?)";
-                $args[]  = $like;
-                $args[]  = $like;
-            }
+            $like = '%'.trim((string)$f['q']).'%';
+            $where[] = "(p.nombre_producto LIKE ? OR p.descripcion LIKE ?)";
+            $args[]  = $like; $args[] = $like;
         }
 
         // Orden
         $orderBy = "p.id_producto DESC";
-        if ($sort === 'precio_asc')  $orderBy = "p.precio_unitario ASC, p.id_producto DESC";
-        if ($sort === 'precio_desc') $orderBy = "p.precio_unitario DESC, p.id_producto DESC";
-        if ($sort === 'nombre')      $orderBy = "p.nombre_producto ASC, p.id_producto DESC";
+        if ($sort==='precio_asc')  $orderBy="p.precio_unitario ASC, p.id_producto DESC";
+        if ($sort==='precio_desc') $orderBy="p.precio_unitario DESC, p.id_producto DESC";
+        if ($sort==='nombre')      $orderBy="p.nombre_producto ASC, p.id_producto DESC";
 
         $offset   = ($page - 1) * $per;
-        $whereSql = $where ? implode(' AND ', $where) : '1';
+        $whereSql = $where ? ('WHERE '.implode(' AND ', $where)) : '';
 
-        // Total
-        $sqlCount = "SELECT COUNT(*) FROM PRODUCTO p WHERE $whereSql";
+        // COUNT con categoría activa
+        $sqlCount = "
+            SELECT COUNT(*)
+            FROM PRODUCTO p
+            INNER JOIN CATEGORIA c ON c.id_categoria = p.id_categoria AND c.activa = 1
+            $whereSql
+        ";
         $stmt = $conn->prepare($sqlCount);
         $stmt->execute($args);
         $total = (int)$stmt->fetchColumn();
 
-        // Items (NO mezclar placeholders: inyecta per/offset como enteros)
+        // ITEMS con categoría activa
         $perInt    = (int)$per;
         $offsetInt = (int)$offset;
-
         $sqlItems = "
             SELECT p.id_producto, p.nombre_producto, p.descripcion, p.precio_unitario,
                 p.stock_actual, p.url_imagen_principal, p.id_categoria, p.activo,
                 p.es_nuevo, p.es_oferta, p.es_popular
             FROM PRODUCTO p
-            WHERE $whereSql
+            INNER JOIN CATEGORIA c ON c.id_categoria = p.id_categoria AND c.activa = 1
+            $whereSql
             ORDER BY $orderBy
             LIMIT $perInt OFFSET $offsetInt
         ";
         $stmt = $conn->prepare($sqlItems);
-        $stmt->execute($args); // Sólo los ? del WHERE
-
+        $stmt->execute($args);
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        return [
-            'items' => $items,
-            'total' => $total,
-            'page'  => $page,
-            'per'   => $per,
-        ];
+        return ['items'=>$items,'total'=>$total,'page'=>$page,'per'=>$per];
     }
 
     public static function obtenerCategoriasAdmin(PDO $conn): array {

@@ -16,14 +16,16 @@
 
       // 2) Buscar producto principal
       $stmt = $conn->prepare("
-          SELECT id_producto, nombre_producto, descripcion, precio_unitario, stock_actual, url_imagen_principal, activo
-          FROM PRODUCTO
-          WHERE id_producto = :id
-          LIMIT 1
+        SELECT p.id_producto, p.nombre_producto, p.descripcion, p.precio_unitario,
+              p.stock_actual, p.url_imagen_principal, p.activo
+        FROM PRODUCTO p
+        INNER JOIN CATEGORIA c ON c.id_categoria = p.id_categoria AND c.activa = 1
+        WHERE p.id_producto = :id AND p.activo = 1
+        LIMIT 1
       ");
       $stmt->execute([':id' => $id]);
       $producto = $stmt->fetch(PDO::FETCH_ASSOC);
-
+      
       if (!$producto || (int)$producto['activo'] !== 1) {
           http_response_code(404);
           $error = "Producto no encontrado o inactivo.";
