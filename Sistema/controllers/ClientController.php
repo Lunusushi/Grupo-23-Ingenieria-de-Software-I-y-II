@@ -97,6 +97,13 @@ class ClientController {
             return null;
         }
 
+        // Check if id_cliente exists in CLIENTE table
+        $checkCliente = $conn->prepare("SELECT id_cliente FROM CLIENTE WHERE id_cliente = ?");
+        $checkCliente->execute([$id_cliente]);
+        if (!$checkCliente->fetch()) {
+            return null; // Cliente no existe
+        }
+
         $stmt = $conn->prepare("SELECT * FROM LISTA_FAVORITOS WHERE id_cliente = ?");
         $stmt->execute([$id_cliente]);
         $lista = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -133,15 +140,54 @@ class ClientController {
         return "✅ Producto agregado a favoritos.";
     }
 
-    public static function obtenerFavoritos($conn, $id_lista) {
-        $stmt = $conn->prepare("
-            SELECT i.*, p.nombre_producto, p.url_imagen_principal
+    public static function obtenerFavoritos($conn, $id_lista, ?string $q = null, ?string $sort = null, ?float $minPrice = null, ?float $maxPrice = null) {
+        $sql = "
+            SELECT i.*, p.nombre_producto, p.url_imagen_principal, p.precio_unitario, i.fecha_agregado
             FROM ITEM_FAVORITO i
             JOIN PRODUCTO p ON i.id_producto = p.id_producto
             WHERE i.id_lista = ?
-        ");
-        $stmt->execute([$id_lista]);
+        ";
+        $params = [$id_lista];
+
+        if ($q !== null && $q !== '') {
+            $sql .= " AND p.nombre_producto LIKE ?";
+            $params[] = '%' . $q . '%';
+        }
+
+        if ($minPrice !== null) {
+            $sql .= " AND p.precio_unitario >= ?";
+            $params[] = $minPrice;
+        }
+
+        if ($maxPrice !== null) {
+            $sql .= " AND p.precio_unitario <= ?";
+            $params[] = $maxPrice;
+        }
+
+        $orderBy = "i.fecha_agregado DESC"; // default: most recent
+        if ($sort === 'nombre_asc') {
+            $orderBy = "p.nombre_producto ASC";
+        } elseif ($sort === 'nombre_desc') {
+            $orderBy = "p.nombre_producto DESC";
+        } elseif ($sort === 'precio_asc') {
+            $orderBy = "p.precio_unitario ASC";
+        } elseif ($sort === 'precio_desc') {
+            $orderBy = "p.precio_unitario DESC";
+        } elseif ($sort === 'recientes') {
+            $orderBy = "i.fecha_agregado DESC";
+        }
+
+        $sql .= " ORDER BY $orderBy";
+
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function eliminarFavorito($conn, $id_lista, $id_producto) {
+        $stmt = $conn->prepare("DELETE FROM ITEM_FAVORITO WHERE id_lista = ? AND id_producto = ?");
+        $stmt->execute([$id_lista, $id_producto]);
+        return $stmt->rowCount() > 0;
     }
 
     // PedidoController methods
