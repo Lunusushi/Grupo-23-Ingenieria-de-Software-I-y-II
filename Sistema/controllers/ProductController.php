@@ -26,6 +26,8 @@ class ProductController {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+
+
     public static function obtenerProductoById($conn, $id_producto) {
         $stmt = $conn->prepare("SELECT * FROM PRODUCTO WHERE id_producto = ?");
         $stmt->execute([$id_producto]);
@@ -382,12 +384,41 @@ class PlantillaCategoriaController {
     public static function obtenerCategoriasAdmin(PDO $conn): array {
         $sql = "
           SELECT c.id_categoria, c.nombre_categoria, c.descripcion_categoria, c.id_padre, c.activa,
+                 (SELECT COUNT(*) FROM PRODUCTO p WHERE p.id_categoria = c.id_categoria) AS num_productos,
                  p.nombre_categoria AS nombre_padre
           FROM CATEGORIA c
           LEFT JOIN CATEGORIA p ON p.id_categoria = c.id_padre
           ORDER BY (c.id_padre IS NULL) DESC, c.id_padre, c.nombre_categoria
         ";
         return $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function crearCategoria(PDO $conn, string $nombre, ?string $desc, ?int $padre, bool $activa): void {
+        $stmt = $conn->prepare("INSERT INTO CATEGORIA (nombre_categoria, descripcion_categoria, id_padre, activa) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$nombre, $desc, $padre, $activa ? 1 : 0]);
+    }
+
+    public static function actualizarCategoria(PDO $conn, int $id, string $nombre, ?string $desc, ?int $padre): void {
+        $stmt = $conn->prepare("UPDATE CATEGORIA SET nombre_categoria = ?, descripcion_categoria = ?, id_padre = ? WHERE id_categoria = ?");
+        $stmt->execute([$nombre, $desc, $padre, $id]);
+    }
+
+    public static function setCategoriaActiva(PDO $conn, int $id, bool $activa): void {
+        $stmt = $conn->prepare("UPDATE CATEGORIA SET activa = ? WHERE id_categoria = ?");
+        $stmt->execute([$activa ? 1 : 0, $id]);
+    }
+
+    public static function eliminarCategoria(PDO $conn, int $id): bool|string {
+        try {
+            $stmt = $conn->prepare("DELETE FROM CATEGORIA WHERE id_categoria = ?");
+            $stmt->execute([$id]);
+            return true;
+        } catch (PDOException $e) {
+            if ($e->getCode() === '23000') {
+                return "⚠️ No se puede eliminar la categoría porque tiene subcategorías o productos asociados.";
+            }
+            throw $e;
+        }
     }
 
     // Devuelve [id_categoria => orden] de una colección

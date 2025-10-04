@@ -18,7 +18,7 @@ $editando = false;
 $catEdit  = null;
 
 // Para selects de padre
-$catsAll = ProductController::obtenerCategoriasAdmin($conn);
+$catsAll = PlantillaCategoriaController::obtenerCategoriasAdmin($conn);
 
 // Modo edición
 if (isset($_GET['editar']) && ctype_digit((string)$_GET['editar'])) {
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($nombre === '') {
       $flashErr = 'El nombre es obligatorio.';
     } else {
-      ProductController::crearCategoria($conn, $nombre, $desc ?: null, $padre, $activa);
+      PlantillaCategoriaController::crearCategoria($conn, $nombre, $desc ?: null, $padre, $activa);
       $flashOk = '✅ Categoría creada.';
     }
   }
@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
       // Evitar poner la categoría como hija de sí misma
       if ($padre === $idc) $padre = null;
-      ProductController::actualizarCategoria($conn, $idc, $nombre, $desc ?: null, $padre);
+      PlantillaCategoriaController::actualizarCategoria($conn, $idc, $nombre, $desc ?: null, $padre);
       $flashOk = '✅ Categoría actualizada.';
     }
   }
@@ -69,13 +69,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($action === 'toggle' && isset($_POST['id_categoria'], $_POST['nuevo_activa'])) {
     $idc   = (int)$_POST['id_categoria'];
     $nuevo = ((int)$_POST['nuevo_activa'] === 1);
-    ProductController::setCategoriaActiva($conn, $idc, $nuevo);
+    PlantillaCategoriaController::setCategoriaActiva($conn, $idc, $nuevo);
     $flashOk = $nuevo ? '✅ Categoría activada.' : '⛔ Categoría desactivada.';
   }
 
   if ($action === 'delete' && isset($_POST['id_categoria'])) {
     $idc = (int)$_POST['id_categoria'];
-    $res = ProductController::eliminarCategoria($conn, $idc);
+    $res = PlantillaCategoriaController::eliminarCategoria($conn, $idc);
     if ($res === true) {
       $flashOk = '🗑️ Categoría eliminada.';
     } else {
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (isset($_GET['ok']) && $_GET['ok'] !== '')  $flashOk  = $_GET['ok'];
 if (isset($_GET['err']) && $_GET['err'] !== '') $flashErr = $_GET['err'];
 // Refrescar datos (por si hubo cambios)
-$catsAll = ProductController::obtenerCategoriasAdmin($conn);
+$catsAll = PlantillaCategoriaController::obtenerCategoriasAdmin($conn);
 ?>
 <!DOCTYPE html>
 <html lang="es">
