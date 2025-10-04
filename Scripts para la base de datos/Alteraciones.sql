@@ -49,19 +49,50 @@ ALTER TABLE PRODUCTO
 ALTER TABLE CATEGORIA
   ADD COLUMN activa BOOLEAN DEFAULT 1;
 
--- PRODUCTO_PLANTILLA: presets para altas rápidas de productos
-CREATE TABLE IF NOT EXISTS PRODUCTO_PLANTILLA (
+CREATE TABLE IF NOT EXISTS PLANTILLA (
   id_plantilla INT AUTO_INCREMENT PRIMARY KEY,
-  nombre_plantilla VARCHAR(120) NOT NULL,
-  id_categoria INT NULL,
-  nombre_sugerido VARCHAR(120) NULL,
-  descripcion_sugerida TEXT NULL,
-  precio_por_defecto DECIMAL(10,2) NULL,
-  url_imagen_por_defecto TEXT NULL,
-  es_nuevo_def BOOLEAN DEFAULT 0,
-  es_oferta_def BOOLEAN DEFAULT 0,
-  es_popular_def BOOLEAN DEFAULT 0,
-  activa BOOLEAN DEFAULT 1,
-  fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (id_categoria) REFERENCES CATEGORIA(id_categoria)
+  nombre       VARCHAR(120) NOT NULL UNIQUE,
+  activa       BOOLEAN DEFAULT 1,
+  fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Relación N:N con productos (sólo agrupar y ordenar)
+CREATE TABLE IF NOT EXISTS PLANTILLA_PRODUCTO (
+  id_plantilla INT NOT NULL,
+  id_producto  INT NOT NULL,
+  orden        INT DEFAULT 0,
+  PRIMARY KEY (id_plantilla, id_producto),
+  CONSTRAINT fk_pp_plantilla FOREIGN KEY (id_plantilla)
+    REFERENCES PLANTILLA(id_plantilla) ON DELETE CASCADE,
+  CONSTRAINT fk_pp_producto FOREIGN KEY (id_producto)
+    REFERENCES PRODUCTO(id_producto) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_pp_plantilla_orden ON PLANTILLA_PRODUCTO (id_plantilla, orden);
+
+USE loscobres_db;
+
+-- Colecciones de categorías (tabla propia)
+CREATE TABLE IF NOT EXISTS PLANTILLA_CAT (
+  id_plantilla_cat INT AUTO_INCREMENT PRIMARY KEY,
+  nombre           VARCHAR(120) NOT NULL UNIQUE,
+  activa           BOOLEAN DEFAULT 1,
+  fecha_creacion   DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Miembros de la colección (categorías + orden)
+CREATE TABLE IF NOT EXISTS PLANTILLA_CAT_ITEM (
+  id_plantilla_cat INT NOT NULL,
+  id_categoria     INT NOT NULL,
+  orden            INT DEFAULT 0,
+  PRIMARY KEY (id_plantilla_cat, id_categoria),
+  CONSTRAINT fk_pcat_item_plantilla
+    FOREIGN KEY (id_plantilla_cat) REFERENCES PLANTILLA_CAT(id_plantilla_cat)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_pcat_item_categoria
+    FOREIGN KEY (id_categoria) REFERENCES CATEGORIA(id_categoria)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX idx_pcat_item_plantilla_orden
+  ON PLANTILLA_CAT_ITEM (id_plantilla_cat, orden);

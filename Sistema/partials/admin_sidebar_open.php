@@ -62,6 +62,8 @@ if ($userType !== 'operador' || !$cargo) {
           <li class="nav-item"><a class="nav-link text-white" href="admin_permisos.php"    >🔐 Permisos</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="admin_NuevosUsuario.php"    >👤 Mantenedor Usuarios</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="admin_TablasVentas.php"    >📈 Auditoria de ventas</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="admin_plantillas_productos.php"  >🧩 Colecciones de productos</a></li>
+          <li class="nav-item"><a class="nav-link text-white" href="admin_plantillas_cat.php">🧩 Colecciones de categorías</a></li>
         <?php elseif ($cargo === 'catalogo'): ?>
           <li class="nav-item"><a class="nav-link text-white" href="admin_productos.php"   >📦 Admin Productos</a></li>
           <li class="nav-item"><a class="nav-link text-white" href="admin_categorias.php"  >🗂 Categorías</a></li>
