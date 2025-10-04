@@ -242,6 +242,28 @@ class ClientController {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    public static function actualizarEstadoPedido(PDO $conn, int $id_pedido, string $nuevo_estado): void {
+        $stmt = $conn->prepare("UPDATE PEDIDO SET estado = ? WHERE id_pedido = ?");
+        $stmt->execute([$nuevo_estado, $id_pedido]);
+    }
+
+    public static function obtenerPedidosPendientes(PDO $conn): array {
+        $stmt = $conn->query("
+            SELECT p.id_pedido, p.fecha_pedido, p.estado, p.codigo_verificacion, p.metodo_pago, p.lugar_retiro,
+                   COALESCE(u.nombre, p.guest_nombre) AS cliente_nombre,
+                   COALESCE(u.apellido, '') AS cliente_apellido,
+                   COALESCE(SUM(dp.subtotal), 0) AS total
+            FROM PEDIDO p
+            LEFT JOIN CLIENTE c ON p.id_cliente = c.id_cliente
+            LEFT JOIN USUARIO u ON c.id_usuario = u.id_usuario
+            LEFT JOIN DETALLE_PEDIDO dp ON p.id_pedido = dp.id_pedido
+            WHERE p.estado = 'pendiente'
+            GROUP BY p.id_pedido
+            ORDER BY p.fecha_pedido DESC
+        ");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public static function detallesPedido($conn, $id_pedido) {
         $stmt = $conn->prepare("
             SELECT d.*, p.nombre_producto
