@@ -1,28 +1,27 @@
 <?php
-session_start();
-if (!isset($_SESSION['user']['id'])) {
-    header("Location: login.php");
-    exit();
-}
+  session_start();
+  if (!isset($_SESSION['user']['id'])) {
+      header("Location: login.php");
+      exit();
+  }
 
-require_once 'config/MySqlDb.php';
-require_once 'controllers/ClientController.php';
-require_once 'partials/navbar.php'; // Incluyo el navbar común
+  require_once 'config/MySqlDb.php';
+  require_once 'controllers/ClientController.php';
 
-$pedido = null;
-$detalles = [];
-$error = "";
+  $pedido = null;
+  $detalles = [];
+  $error = "";
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $codigo = trim($_POST["codigo"]);
-    $pedido = ClientController::buscarPedidoPorCodigo($conn, $codigo);
+  if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $codigo = trim($_POST["codigo"]);
+      $pedido = ClientController::buscarPedidoPorCodigo($conn, $codigo);
 
-    if ($pedido) {
-        $detalles = ClientController::detallesPedido($conn, $pedido["id_pedido"]);
-    } else {
-        $error = "❌ Pedido no encontrado.";
-    }
-}
+      if ($pedido) {
+          $detalles = ClientController::detallesPedido($conn, $pedido["id_pedido"]);
+      } else {
+          $error = "❌ Pedido no encontrado.";
+      }
+  }
 ?>
 
 <!DOCTYPE html>
@@ -30,11 +29,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
     <meta charset="UTF-8">
     <title>Verificar Pedido</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="public/css/main.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
-
+<?php include __DIR__ . '/partials/admin_sidebar_open.php';?>
 <div class="container mt-4">
   <h2 class="mb-4">🔎 Verificar Pedido por Código</h2>
 
@@ -69,6 +68,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     </div>
   <?php endif; ?>
 </div>
-
+<?php include __DIR__ . '/partials/admin_sidebar_close.php'; // cierra main + flex ?>
 </body>
 </html>
