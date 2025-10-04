@@ -12,39 +12,69 @@ if ($userType !== 'operador' || !$cargo) {
   exit;
 }
 
-// Fetch total sales metrics
-$stmt = $conn->prepare("
-    SELECT 
-        COUNT(*) AS total_sales,
-        COALESCE(SUM(dp.subtotal), 0) AS total_revenue
-    FROM PEDIDO p
-    LEFT JOIN DETALLE_PEDIDO dp ON p.id_pedido = dp.id_pedido
-    WHERE p.estado = 'completado'
-");
-$stmt->execute();
-$salesMetrics = $stmt->fetch(PDO::FETCH_ASSOC);
+$start_date = $_GET['start_date'] ?? '';
+$end_date = $_GET['end_date'] ?? '';
+
+// Validate and prepare date filters
+$dateFilter = '';
+$params = [];
+
+if ($start_date && $end_date) {
+    $dateFilter = "AND p.fecha_pedido BETWEEN ? AND ?";
+    $params[] = $start_date . " 00:00:00";
+    $params[] = $end_date . " 23:59:59";
+} elseif ($start_date) {
+    $dateFilter = "AND p.fecha_pedido >= ?";
+    $params[] = $start_date . " 00:00:00";
+} elseif ($end_date) {
+    $dateFilter = "AND p.fecha_pedido <= ?";
+    $params[] = $end_date . " 23:59:59";
+}
+
+try {
+    $stmt = $conn->prepare("
+        SELECT 
+            COUNT(*) AS total_sales,
+            COALESCE(SUM(dp.subtotal), 0) AS total_revenue
+        FROM PEDIDO p
+        LEFT JOIN DETALLE_PEDIDO dp ON p.id_pedido = dp.id_pedido
+        WHERE p.estado = 'completado' $dateFilter
+    ");
+    $stmt->execute($params);
+    $salesMetrics = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $salesMetrics = ['total_sales' => 0, 'total_revenue' => 0];
+}
 
 // Fetch top products by quantity sold (top 5)
-$stmt = $conn->prepare("
-    SELECT p.id_producto, p.nombre_producto, COALESCE(SUM(dp.cantidad), 0) AS total_sold
-    FROM DETALLE_PEDIDO dp
-    JOIN PRODUCTO p ON dp.id_producto = p.id_producto
-    GROUP BY p.id_producto, p.nombre_producto
-    ORDER BY total_sold DESC
-    LIMIT 5
-");
-$stmt->execute();
-$topProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $stmt = $conn->prepare("
+        SELECT p.id_producto, p.nombre_producto, COALESCE(SUM(dp.cantidad), 0) AS total_sold
+        FROM DETALLE_PEDIDO dp
+        JOIN PRODUCTO p ON dp.id_producto = p.id_producto
+        GROUP BY p.id_producto, p.nombre_producto
+        ORDER BY total_sold DESC
+        LIMIT 5
+    ");
+    $stmt->execute();
+    $topProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $topProducts = [];
+}
 
 // Fetch products with low stock (stock_actual < 10)
-$stmt = $conn->prepare("
-    SELECT id_producto, nombre_producto, stock_actual
-    FROM PRODUCTO
-    WHERE stock_actual < 10
-    ORDER BY stock_actual ASC
-");
-$stmt->execute();
-$lowStockProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $stmt = $conn->prepare("
+        SELECT id_producto, nombre_producto, stock_actual
+        FROM PRODUCTO
+        WHERE stock_actual < 10
+        ORDER BY stock_actual ASC
+    ");
+    $stmt->execute();
+    $lowStockProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $lowStockProducts = [];
+}
 
 ?>
 <!DOCTYPE html>
@@ -59,6 +89,26 @@ $lowStockProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php include 'partials/admin_sidebar_open.php'; ?>
     <div class="container mt-4">
         <h1 class="mb-4">📈 Auditoría de Ventas - Tablero de Métricas</h1>
+
+        <form method="GET" class="row g-3 mb-4">
+            <div class="col-auto">
+                <label for="start_date" class="col-form-label">Fecha inicio:</label>
+            </div>
+            <div class="col-auto">
+                <input type="date" id="start_date" name="start_date" class="form-control"
+                    value="<?php echo htmlspecialchars($_GET['start_date'] ?? ''); ?>">
+            </div>
+            <div class="col-auto">
+                <label for="end_date" class="col-form-label">Fecha fin:</label>
+            </div>
+            <div class="col-auto">
+                <input type="date" id="end_date" name="end_date" class="form-control"
+                    value="<?php echo htmlspecialchars($_GET['end_date'] ?? ''); ?>">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+            </div>
+        </form>
 
         <div class="row mb-4">
             <div class="col-md-6 col-lg-4">
