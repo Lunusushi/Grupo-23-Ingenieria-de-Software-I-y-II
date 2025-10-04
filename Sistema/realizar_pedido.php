@@ -10,7 +10,16 @@
   $id_usuario = $isCliente ? (int)$_SESSION['user']['id'] : null;
 
   // Obtener carrito universal (cliente o invitado)
-  $carrito = ClientController::obtenerCarritoUniversal($conn, $id_usuario);
+  // Map id_usuario to id_cliente
+  $stmt = $conn->prepare("SELECT id_cliente FROM CLIENTE WHERE id_usuario = ?");
+  $stmt->execute([$id_usuario]);
+  $row = $stmt->fetch(PDO::FETCH_ASSOC);
+  if (!$row) {
+      die("No tienes acceso a esta página o no eres un cliente registrado.");
+  }
+  $id_cliente = $row['id_cliente'];
+
+  $carrito = ClientController::obtenerCarritoUniversal($conn, $id_cliente);
   if (!$carrito) {
       die("No hay carrito disponible para tu tipo de usuario.");
   }
@@ -58,7 +67,7 @@
           try {
               if ($isCliente) {
                   // Flujo actual para clientes registrados (la asignación de operador la hace el método)
-                  $codigoPedido = ClientController::realizarPedido($conn, $id_usuario, $id_carrito, $metodo_pago, $lugar_retiro);
+                  $codigoPedido = ClientController::realizarPedido($conn, $id_cliente, $id_carrito, $metodo_pago, $lugar_retiro);
                   $mensaje = "✅ Pedido realizado. Tu código de verificación es: <strong>" . htmlspecialchars($codigoPedido) . "</strong>";
               } else {
                   // Flujo invitado (la asignación de operador la hace el método)

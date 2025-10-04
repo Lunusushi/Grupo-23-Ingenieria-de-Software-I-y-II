@@ -10,8 +10,17 @@ require_once __DIR__ . '/partials/navbar.php';
 $isCliente  = (isset($_SESSION['user']['type']) && $_SESSION['user']['type'] === 'cliente');
 $id_usuario = $isCliente ? (int)$_SESSION['user']['id'] : null;
 
+// Map id_usuario to id_cliente
+$stmt = $conn->prepare("SELECT id_cliente FROM CLIENTE WHERE id_usuario = ?");
+$stmt->execute([$id_usuario]);
+$row = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$row) {
+    die("No tienes acceso a esta página o no eres un cliente registrado.");
+}
+$id_cliente = $row['id_cliente'];
+
 // Obtener/crear carrito universal (cliente o invitado)
-$carrito = ClientController::obtenerCarritoUniversal($conn, $id_usuario);
+$carrito = ClientController::obtenerCarritoUniversal($conn, $id_cliente);
 if (!$carrito) {
     die("No hay carrito disponible para tu tipo de usuario.");
 }
