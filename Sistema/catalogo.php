@@ -3,7 +3,28 @@
 
   require_once __DIR__ . '/config/MySqlDb.php';
   require_once __DIR__ . '/controllers/ProductController.php';
+  require_once __DIR__ . '/controllers/ClientController.php';
   require_once __DIR__ . '/partials/navbar.php';
+
+  // Check if user is logged in as client for favorites
+  $isCliente = (isset($_SESSION['user']['type']) && $_SESSION['user']['type'] === 'cliente');
+  $id_usuario = $isCliente ? (int)$_SESSION['user']['id'] : null;
+  $id_cliente = null;
+  if ($id_usuario) {
+    $stmt = $conn->prepare("SELECT id_cliente FROM CLIENTE WHERE id_usuario = ?");
+    $stmt->execute([$id_usuario]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $id_cliente = $row ? $row['id_cliente'] : null;
+  }
+
+  // Handle adding to favorites
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_fav' && $id_cliente) {
+    $id_producto = (int)($_POST['id_producto'] ?? 0);
+    ClientController::agregarFavorito($conn, ClientController::obtenerLista($conn, $id_cliente)['id_lista'], $id_producto);
+    // Redirect to avoid resubmission
+    header("Location: " . $_SERVER['REQUEST_URI']);
+    exit;
+  }
 
   /* === Sanitizar parámetros de la URL === */
   $page = (isset($_GET['page']) && ctype_digit((string)$_GET['page'])) ? (int)$_GET['page'] : 1;
@@ -187,13 +208,22 @@
             <p class="mb-1"><strong>$<?= number_format((float)$p['precio_unitario'], 0, ',', '.') ?></strong></p>
             <p class="text-muted mb-3">Stock: <?= htmlspecialchars((string)$p['stock_actual']) ?></p>
 
-            <form method="POST" action="carrito.php" class="mt-auto">
-              <input type="hidden" name="id_producto" value="<?= (int)$p['id_producto'] ?>">
-              <div class="input-group">
-                <input type="number" name="cantidad" class="form-control" value="1" min="1" step="1" required>
-                <button class="btn btn-success" type="submit">🛒</button>
-              </div>
-            </form>
+            <div class="mt-auto">
+              <form method="POST" action="carrito.php" class="d-inline">
+                <input type="hidden" name="id_producto" value="<?= (int)$p['id_producto'] ?>">
+                <div class="input-group d-inline-flex" style="width: auto;">
+                  <input type="number" name="cantidad" class="form-control" value="1" min="1" step="1" required style="width: 70px;">
+                  <button class="btn btn-success" type="submit">🛒</button>
+                </div>
+              </form>
+              <?php if ($id_cliente): ?>
+                <form method="POST" class="d-inline ms-2">
+                  <input type="hidden" name="action" value="add_fav">
+                  <input type="hidden" name="id_producto" value="<?= (int)$p['id_producto'] ?>">
+                  <button class="btn btn-outline-danger" type="submit" title="Agregar a favoritos">❤️</button>
+                </form>
+              <?php endif; ?>
+            </div>
           </div>
         </div>
       </div>
