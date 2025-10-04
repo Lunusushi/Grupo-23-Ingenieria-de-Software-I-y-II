@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/MySqlDb.php';
 
 class ProductController {
+    // Lista productos activos; si pasas categorías, filtra. Siempre exige categoría activa.
     public static function obtenerProductos($conn, $id_categorias = []) {
         if (empty($id_categorias)) {
             $sql = "
@@ -31,16 +32,18 @@ class ProductController {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    // Solo categorías activas (vista cliente)
     public static function obtenerCategorias($conn) {
         $stmt = $conn->query("SELECT * FROM CATEGORIA WHERE activa = 1 ORDER BY nombre_categoria");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    // Para grilla admin (incluye estado de la categoría)
     public static function obtenerProductosAdmin(PDO $conn): array {
         $stmt = $conn->query("
             SELECT p.id_producto, p.nombre_producto, p.descripcion, p.precio_unitario, p.stock_actual,
-                p.url_imagen_principal, p.id_categoria, p.activo, p.es_nuevo, p.es_oferta, p.es_popular,
-                c.activa AS categoria_activa
+                   p.url_imagen_principal, p.id_categoria, p.activo, p.es_nuevo, p.es_oferta, p.es_popular,
+                   c.activa AS categoria_activa
             FROM PRODUCTO p
             LEFT JOIN CATEGORIA c ON c.id_categoria = p.id_categoria
             ORDER BY p.id_producto DESC
@@ -70,9 +73,8 @@ class ProductController {
         } catch (PDOException $e) {
             if ($e->getCode() === '23000') {
                 return "⚠️ No se puede eliminar el producto porque está asociado a pedidos existentes.";
-            } else {
-                throw $e;
             }
+            throw $e;
         }
     }
 
@@ -81,6 +83,7 @@ class ProductController {
         $stmt->execute([':a' => $activo ? 1 : 0, ':id' => $id_producto]);
     }
 
+    // Autocomplete (cliente): solo activos y con categoría activa
     public static function buscarProductos($conn, $keyword) {
         $sql = "
             SELECT p.id_producto, p.nombre_producto, p.url_imagen_principal
@@ -90,7 +93,7 @@ class ProductController {
             LIMIT 10
         ";
         $stmt = $conn->prepare($sql);
-        $stmt->execute(['%' . $keyword . '%']);
+        $stmt->execute(['%'.$keyword.'%']);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -101,6 +104,27 @@ class ProductController {
         exit;
     }
 
+    // Autocomplete admin: activos e inactivos
+    public static function buscarProductosAdmin(PDO $conn, string $keyword): array {
+        $sql = "
+            SELECT id_producto, nombre_producto, url_imagen_principal, activo
+            FROM PRODUCTO
+            WHERE nombre_producto LIKE ?
+            ORDER BY id_producto DESC
+            LIMIT 10
+        ";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute(['%'.$keyword.'%']);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function buscarProductosAdminJSON(PDO $conn, string $keyword): void {
+        $items = self::buscarProductosAdmin($conn, $keyword);
+        header('Content-Type: application/json');
+        echo json_encode($items);
+        exit;
+    }
+
     public static function listarPaginado(PDO $conn, array $f = [], int $page = 1, int $per = 12, string $sort = 'recientes'): array
     {
         $page = max(1, $page);
@@ -108,10 +132,10 @@ class ProductController {
         $validSort = ['recientes','precio_asc','precio_desc','nombre'];
         if (!in_array($sort, $validSort, true)) $sort = 'recientes';
 
-        $where = ['p.activo = 1']; // categoría activa va en el JOIN
+        $where = ['p.activo = 1']; // categoría activa se exige en el JOIN
         $args  = [];
 
-        // Categorías
+        // Categorías (checkbox)
         if (!empty($f['cat']) && is_array($f['cat'])) {
             $cats = array_values(array_filter($f['cat'], fn($v) => ctype_digit((string)$v)));
             if (!empty($cats)) {
@@ -135,6 +159,28 @@ class ProductController {
             $args[]  = $like; $args[] = $like;
         }
 
+        // Filtro por PLANTILLA (colección de productos) — exige plantilla activa
+        if (!empty($f['plantilla']) && ctype_digit((string)$f['plantilla'])) {
+            $where[] = "p.id_producto IN (
+                SELECT pp.id_producto
+                FROM PLANTILLA_PRODUCTO pp
+                INNER JOIN PLANTILLA pl ON pl.id_plantilla = pp.id_plantilla
+                WHERE pp.id_plantilla = ? AND pl.activa = 1
+            )";
+            $args[]  = (int)$f['plantilla'];
+        }
+
+        // Filtro por colección de categorías — exige colección activa
+        if (!empty($f['catset']) && ctype_digit((string)$f['catset'])) {
+            $where[] = "p.id_categoria IN (
+                SELECT pci.id_categoria
+                FROM PLANTILLA_CAT_ITEM pci
+                INNER JOIN PLANTILLA_CAT pc ON pc.id_plantilla_cat = pci.id_plantilla_cat
+                WHERE pci.id_plantilla_cat = ? AND pc.activa = 1
+            )";
+            $args[] = (int)$f['catset'];
+        }
+
         // Orden
         $orderBy = "p.id_producto DESC";
         if ($sort==='precio_asc')  $orderBy="p.precio_unitario ASC, p.id_producto DESC";
@@ -144,7 +190,7 @@ class ProductController {
         $offset   = ($page - 1) * $per;
         $whereSql = $where ? ('WHERE '.implode(' AND ', $where)) : '';
 
-        // COUNT con categoría activa
+        // COUNT
         $sqlCount = "
             SELECT COUNT(*)
             FROM PRODUCTO p
@@ -155,7 +201,7 @@ class ProductController {
         $stmt->execute($args);
         $total = (int)$stmt->fetchColumn();
 
-        // ITEMS con categoría activa
+        // ITEMS
         $perInt    = (int)$per;
         $offsetInt = (int)$offset;
         $sqlItems = "
@@ -174,200 +220,222 @@ class ProductController {
 
         return ['items'=>$items,'total'=>$total,'page'=>$page,'per'=>$per];
     }
-
-    public static function obtenerCategoriasAdmin(PDO $conn): array {
-        // Incluye inactivas, padre y conteo de productos
-        $sql = "
-            SELECT c.id_categoria, c.nombre_categoria, c.descripcion_categoria, c.id_padre, c.activa,
-                   pcount.cnt AS num_productos,
-                   p.nombre_categoria AS nombre_padre
-            FROM CATEGORIA c
-            LEFT JOIN (
-                SELECT id_categoria, COUNT(*) AS cnt
-                FROM PRODUCTO
-                GROUP BY id_categoria
-            ) pcount ON pcount.id_categoria = c.id_categoria
-            LEFT JOIN CATEGORIA p ON p.id_categoria = c.id_padre
-            ORDER BY 
-                (c.id_padre IS NULL) DESC,
-                c.id_padre,
-                c.nombre_categoria
-        ";
-        $stmt = $conn->query($sql);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public static function crearCategoria(PDO $conn, string $nombre, ?string $descripcion, ?int $id_padre, bool $activa = true): void {
-        $stmt = $conn->prepare("
-            INSERT INTO CATEGORIA (nombre_categoria, descripcion_categoria, id_padre, activa)
-            VALUES (:n, :d, :p, :a)
-        ");
-        $stmt->execute([
-            ':n' => $nombre,
-            ':d' => $descripcion ?: null,
-            ':p' => $id_padre ?: null,
-            ':a' => $activa ? 1 : 0,
-        ]);
-    }
-
-    public static function actualizarCategoria(PDO $conn, int $id_categoria, string $nombre, ?string $descripcion, ?int $id_padre): void {
-        $stmt = $conn->prepare("
-            UPDATE CATEGORIA
-            SET nombre_categoria = :n, descripcion_categoria = :d, id_padre = :p
-            WHERE id_categoria = :id
-        ");
-        $stmt->execute([
-            ':n'  => $nombre,
-            ':d'  => $descripcion ?: null,
-            ':p'  => $id_padre ?: null,
-            ':id' => $id_categoria,
-        ]);
-    }
-
-    public static function setCategoriaActiva(PDO $conn, int $id_categoria, bool $activa): void {
-        $stmt = $conn->prepare("UPDATE CATEGORIA SET activa = :a WHERE id_categoria = :id");
-        $stmt->execute([':a' => $activa ? 1 : 0, ':id' => $id_categoria]);
-    }
-
-    public static function eliminarCategoria(PDO $conn, int $id_categoria) {
-        // 1) ¿Tiene subcategorías?
-        $stmt = $conn->prepare("SELECT COUNT(*) FROM CATEGORIA WHERE id_padre = ?");
-        $stmt->execute([$id_categoria]);
-        $hijos = (int)$stmt->fetchColumn();
-        if ($hijos > 0) {
-            return "⚠️ No se puede borrar: la categoría tiene subcategorías.";
-        }
-
-        // 2) ¿Tiene productos asignados?
-        $stmt = $conn->prepare("SELECT COUNT(*) FROM PRODUCTO WHERE id_categoria = ?");
-        $stmt->execute([$id_categoria]);
-        $prods = (int)$stmt->fetchColumn();
-        if ($prods > 0) {
-            return "⚠️ No se puede borrar: hay productos asignados a esta categoría.";
-        }
-
-        // 3) Borrar
-        $stmt = $conn->prepare("DELETE FROM CATEGORIA WHERE id_categoria = ?");
-        $stmt->execute([$id_categoria]);
-        return true;
-    }
 }
 
 class PlantillaController {
-    public static function obtenerPlantillas(PDO $conn): array {
+    public static function listar(PDO $conn): array {
+        $sql = "SELECT id_plantilla, nombre, activa, fecha_creacion
+                FROM PLANTILLA ORDER BY id_plantilla DESC";
+        return $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function obtener(PDO $conn, int $id_plantilla): ?array {
+        $stmt = $conn->prepare("SELECT * FROM PLANTILLA WHERE id_plantilla = ? LIMIT 1");
+        $stmt->execute([$id_plantilla]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    public static function crear(PDO $conn, string $nombre, bool $activa = true): void {
+        // Normaliza un poco el nombre
+        $nombre = trim($nombre);
+        if ($nombre === '') {
+            throw new Exception('El nombre no puede ir vacío.');
+        }
+
+        try {
+            $stmt = $conn->prepare("INSERT INTO PLANTILLA (nombre, activa) VALUES (?, ?)");
+            $stmt->execute([$nombre, $activa ? 1 : 0]);
+        } catch (PDOException $e) {
+            // 1062 = duplicate entry
+            if (isset($e->errorInfo[1]) && (int)$e->errorInfo[1] === 1062) {
+                throw new Exception('⚠️ Ya existe una plantilla con ese nombre.');
+            }
+            throw $e;
+        }
+    }
+
+    // Reemplaza por esta versión con try/catch
+    public static function renombrar(PDO $conn, int $id_plantilla, string $nuevoNombre): void {
+        $nuevoNombre = trim($nuevoNombre);
+        if ($nuevoNombre === '') {
+            throw new Exception('El nombre no puede ir vacío.');
+        }
+
+        try {
+            $stmt = $conn->prepare("UPDATE PLANTILLA SET nombre = ? WHERE id_plantilla = ?");
+            $stmt->execute([$nuevoNombre, $id_plantilla]);
+        } catch (PDOException $e) {
+            if (isset($e->errorInfo[1]) && (int)$e->errorInfo[1] === 1062) {
+                throw new Exception('⚠️ Ya existe una plantilla con ese nombre.');
+            }
+            throw $e;
+        }
+    }
+
+    public static function setActiva(PDO $conn, int $id_plantilla, bool $activa): void {
+        $stmt = $conn->prepare("UPDATE PLANTILLA SET activa = ? WHERE id_plantilla = ?");
+        $stmt->execute([$activa ? 1 : 0, $id_plantilla]);
+    }
+
+    public static function eliminar(PDO $conn, int $id_plantilla): void {
+        $stmt = $conn->prepare("DELETE FROM PLANTILLA WHERE id_plantilla = ?");
+        $stmt->execute([$id_plantilla]);
+    }
+
+    /* === Ítems (productos en la plantilla) === */
+    public static function agregarProducto(PDO $conn, int $id_plantilla, int $id_producto, int $orden = 0): void {
+        $stmt = $conn->prepare("
+          INSERT INTO PLANTILLA_PRODUCTO (id_plantilla, id_producto, orden)
+          VALUES (:p, :prod, :o)
+          ON DUPLICATE KEY UPDATE orden = VALUES(orden)
+        ");
+        $stmt->execute([':p'=>$id_plantilla, ':prod'=>$id_producto, ':o'=>$orden]);
+    }
+
+    public static function quitarProducto(PDO $conn, int $id_plantilla, int $id_producto): void {
+        $stmt = $conn->prepare("DELETE FROM PLANTILLA_PRODUCTO WHERE id_plantilla = ? AND id_producto = ?");
+        $stmt->execute([$id_plantilla, $id_producto]);
+    }
+
+    public static function setOrden(PDO $conn, int $id_plantilla, int $id_producto, int $orden): void {
+        $stmt = $conn->prepare("
+          UPDATE PLANTILLA_PRODUCTO SET orden = :o
+          WHERE id_plantilla = :p AND id_producto = :prod
+        ");
+        $stmt->execute([':o'=>$orden, ':p'=>$id_plantilla, ':prod'=>$id_producto]);
+    }
+
+    public static function listarProductos(PDO $conn, int $id_plantilla): array {
         $sql = "
-          SELECT p.*, c.nombre_categoria,
-                 c.activa AS categoria_activa
-          FROM PRODUCTO_PLANTILLA p
-          LEFT JOIN CATEGORIA c ON c.id_categoria = p.id_categoria
-          ORDER BY p.id_plantilla DESC
+          SELECT pp.id_producto, pp.orden,
+                 p.nombre_producto, p.url_imagen_principal, p.precio_unitario, p.stock_actual, p.activo
+          FROM PLANTILLA_PRODUCTO pp
+          INNER JOIN PRODUCTO p ON p.id_producto = pp.id_producto
+          WHERE pp.id_plantilla = ?
+          ORDER BY pp.orden ASC, p.id_producto DESC
+        ";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$id_plantilla]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /* === Acciones masivas === */
+    public static function activarPorPlantilla(PDO $conn, int $id_plantilla, bool $activar): int {
+        $sql = "
+          UPDATE PRODUCTO
+          SET activo = :a
+          WHERE id_producto IN (
+            SELECT id_producto FROM PLANTILLA_PRODUCTO WHERE id_plantilla = :p
+          )
+        ";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([':a' => $activar ? 1 : 0, ':p' => $id_plantilla]);
+        return $stmt->rowCount();
+    }
+}
+
+class PlantillaCategoriaController {
+
+    public static function listarColecciones(PDO $conn): array {
+        $sql = "
+          SELECT p.id_plantilla_cat, p.nombre, p.activa, p.fecha_creacion,
+                 COALESCE(pc.cnt, 0) AS num_categorias
+          FROM PLANTILLA_CAT p
+          LEFT JOIN (
+            SELECT id_plantilla_cat, COUNT(*) AS cnt
+            FROM PLANTILLA_CAT_ITEM
+            GROUP BY id_plantilla_cat
+          ) pc ON pc.id_plantilla_cat = p.id_plantilla_cat
+          ORDER BY p.id_plantilla_cat DESC
         ";
         return $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function obtenerPlantillaById(PDO $conn, int $id): ?array {
-        $stmt = $conn->prepare("
-          SELECT p.*, c.nombre_categoria, c.activa AS categoria_activa
-          FROM PRODUCTO_PLANTILLA p
-          LEFT JOIN CATEGORIA c ON c.id_categoria = p.id_categoria
-          WHERE p.id_plantilla = ?
-          LIMIT 1
-        ");
+    public static function obtenerColeccion(PDO $conn, int $id): ?array {
+        $stmt = $conn->prepare("SELECT * FROM PLANTILLA_CAT WHERE id_plantilla_cat = ?");
         $stmt->execute([$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
     }
 
-    public static function crearPlantilla(
-        PDO $conn,
-        string $nombre_plantilla,
-        ?int $id_categoria,
-        ?string $nombre_sugerido,
-        ?string $descripcion_sugerida,
-        ?float $precio_por_defecto,
-        ?string $url_imagen_por_defecto,
-        bool $es_nuevo_def,
-        bool $es_oferta_def,
-        bool $es_popular_def,
-        bool $activa
-    ): void {
-        $stmt = $conn->prepare("
-          INSERT INTO PRODUCTO_PLANTILLA
-          (nombre_plantilla, id_categoria, nombre_sugerido, descripcion_sugerida,
-           precio_por_defecto, url_imagen_por_defecto, es_nuevo_def, es_oferta_def,
-           es_popular_def, activa)
-          VALUES
-          (:np, :idc, :ns, :ds, :ppd, :img, :n, :o, :pop, :act)
-        ");
-        $stmt->execute([
-            ':np'  => $nombre_plantilla,
-            ':idc' => $id_categoria ?: null,
-            ':ns'  => $nombre_sugerido ?: null,
-            ':ds'  => $descripcion_sugerida ?: null,
-            ':ppd' => $precio_por_defecto !== null ? $precio_por_defecto : null,
-            ':img' => $url_imagen_por_defecto ?: null,
-            ':n'   => $es_nuevo_def ? 1 : 0,
-            ':o'   => $es_oferta_def ? 1 : 0,
-            ':pop' => $es_popular_def ? 1 : 0,
-            ':act' => $activa ? 1 : 0,
-        ]);
+    public static function crearColeccion(PDO $conn, string $nombre, bool $activa = true): void {
+        $stmt = $conn->prepare("INSERT INTO PLANTILLA_CAT (nombre, activa) VALUES (:n, :a)");
+        $stmt->execute([':n' => $nombre, ':a' => $activa ? 1 : 0]);
     }
 
-    public static function editarPlantilla(
-        PDO $conn,
-        int $id_plantilla,
-        string $nombre_plantilla,
-        ?int $id_categoria,
-        ?string $nombre_sugerido,
-        ?string $descripcion_sugerida,
-        ?float $precio_por_defecto,
-        ?string $url_imagen_por_defecto,
-        bool $es_nuevo_def,
-        bool $es_oferta_def,
-        bool $es_popular_def,
-        bool $activa
-    ): void {
-        $stmt = $conn->prepare("
-          UPDATE PRODUCTO_PLANTILLA SET
-            nombre_plantilla = :np,
-            id_categoria = :idc,
-            nombre_sugerido = :ns,
-            descripcion_sugerida = :ds,
-            precio_por_defecto = :ppd,
-            url_imagen_por_defecto = :img,
-            es_nuevo_def = :n,
-            es_oferta_def = :o,
-            es_popular_def = :pop,
-            activa = :act
-          WHERE id_plantilla = :id
-        ");
-        $stmt->execute([
-            ':np'  => $nombre_plantilla,
-            ':idc' => $id_categoria ?: null,
-            ':ns'  => $nombre_sugerido ?: null,
-            ':ds'  => $descripcion_sugerida ?: null,
-            ':ppd' => $precio_por_defecto !== null ? $precio_por_defecto : null,
-            ':img' => $url_imagen_por_defecto ?: null,
-            ':n'   => $es_nuevo_def ? 1 : 0,
-            ':o'   => $es_oferta_def ? 1 : 0,
-            ':pop' => $es_popular_def ? 1 : 0,
-            ':act' => $activa ? 1 : 0,
-            ':id'  => $id_plantilla
-        ]);
+    public static function actualizarColeccion(PDO $conn, int $id, string $nombre, bool $activa): void {
+        $stmt = $conn->prepare("UPDATE PLANTILLA_CAT SET nombre = :n, activa = :a WHERE id_plantilla_cat = :id");
+        $stmt->execute([':n' => $nombre, ':a' => $activa ? 1 : 0, ':id' => $id]);
     }
 
-    public static function eliminarPlantilla(PDO $conn, int $id): void {
-        $stmt = $conn->prepare("DELETE FROM PRODUCTO_PLANTILLA WHERE id_plantilla = ?");
+    public static function eliminarColeccion(PDO $conn, int $id): void {
+        $stmt = $conn->prepare("DELETE FROM PLANTILLA_CAT WHERE id_plantilla_cat = ?");
         $stmt->execute([$id]);
     }
 
     public static function setActiva(PDO $conn, int $id, bool $activa): void {
-        $stmt = $conn->prepare("UPDATE PRODUCTO_PLANTILLA SET activa = :a WHERE id_plantilla = :id");
+        $stmt = $conn->prepare("UPDATE PLANTILLA_CAT SET activa = :a WHERE id_plantilla_cat = :id");
         $stmt->execute([':a' => $activa ? 1 : 0, ':id' => $id]);
+    }
+
+    public static function obtenerCategoriasAdmin(PDO $conn): array {
+        $sql = "
+          SELECT c.id_categoria, c.nombre_categoria, c.descripcion_categoria, c.id_padre, c.activa,
+                 p.nombre_categoria AS nombre_padre
+          FROM CATEGORIA c
+          LEFT JOIN CATEGORIA p ON p.id_categoria = c.id_padre
+          ORDER BY (c.id_padre IS NULL) DESC, c.id_padre, c.nombre_categoria
+        ";
+        return $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Devuelve [id_categoria => orden] de una colección
+    public static function obtenerCategoriasDeColeccion(PDO $conn, int $id_plantilla_cat): array {
+        $stmt = $conn->prepare("
+          SELECT id_categoria, orden
+          FROM PLANTILLA_CAT_ITEM
+          WHERE id_plantilla_cat = ?
+          ORDER BY orden, id_categoria
+        ");
+        $stmt->execute([$id_plantilla_cat]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $out = [];
+        foreach ($rows as $r) { $out[(int)$r['id_categoria']] = (int)$r['orden']; }
+        return $out;
+    }
+
+    public static function guardarCategoriasDeColeccion(PDO $conn, int $id_plantilla_cat, array $catIds, array $ordenes): void {
+        $conn->beginTransaction();
+        try {
+            $del = $conn->prepare("DELETE FROM PLANTILLA_CAT_ITEM WHERE id_plantilla_cat = ?");
+            $del->execute([$id_plantilla_cat]);
+
+            if (!empty($catIds)) {
+                $ins = $conn->prepare("
+                  INSERT INTO PLANTILLA_CAT_ITEM (id_plantilla_cat, id_categoria, orden)
+                  VALUES (:p, :c, :o)
+                ");
+                foreach ($catIds as $cid) {
+                    if (!ctype_digit((string)$cid)) continue;
+                    $cid   = (int)$cid;
+                    $orden = isset($ordenes[$cid]) && is_numeric($ordenes[$cid]) ? (int)$ordenes[$cid] : 0;
+                    $ins->execute([':p' => $id_plantilla_cat, ':c' => $cid, ':o' => $orden]);
+                }
+            }
+
+            $conn->commit();
+        } catch (Throwable $e) {
+            $conn->rollBack();
+            throw $e;
+        }
     }
 }
 
 if (isset($_GET['action']) && $_GET['action'] === 'buscar' && isset($_GET['q'])) {
     ProductController::buscarProductosJSON($conn, $_GET['q']);
 }
-?>
+
+if (isset($_GET['action']) && $_GET['action'] === 'buscar_admin' && isset($_GET['q'])) {
+    ProductController::buscarProductosAdminJSON($conn, $_GET['q']);
+}
