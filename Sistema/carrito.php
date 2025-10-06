@@ -9,25 +9,31 @@ require_once __DIR__ . '/partials/navbar.php';
 // ¿Cliente logueado o invitado?
 $isCliente  = (isset($_SESSION['user']['type']) && $_SESSION['user']['type'] === 'cliente');
 $id_usuario = $isCliente ? (int)$_SESSION['user']['id'] : null;
+$id_cliente = null;
+$error = '';
 
-// Map id_usuario to id_cliente
-$stmt = $conn->prepare("SELECT id_cliente FROM CLIENTE WHERE id_usuario = ?");
-$stmt->execute([$id_usuario]);
-$row = $stmt->fetch(PDO::FETCH_ASSOC);
-if (!$row) {
-    die("No tienes acceso a esta página o no eres un cliente registrado.");
+if ($isCliente) {
+    $stmt = $conn->prepare("SELECT id_cliente FROM CLIENTE WHERE id_usuario = ?");
+    $stmt->execute([$id_usuario]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($row) {
+        $id_cliente = (int)$row['id_cliente'];
+    } else {
+        $error = "No encontramos información de cliente asociada a tu cuenta.";
+    }
 }
-$id_cliente = $row['id_cliente'];
 
 // Obtener/crear carrito universal (cliente o invitado)
-$carrito = ClientController::obtenerCarritoUniversal($conn, $id_cliente);
-if (!$carrito) {
-    die("No hay carrito disponible para tu tipo de usuario.");
+$carrito = ClientController::obtenerCarritoUniversal($conn, $id_cliente ?? $id_usuario);
+if (!$carrito && !$error) {
+    $error = "No tienes acceso a esta página o no eres un cliente registrado.";
 }
-$id_carrito = (int)$carrito['id_carrito'];
 
+$id_carrito = $carrito ? (int)$carrito['id_carrito'] : null;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_producto']) && !isset($_POST['action'])) {
+if (!$error && $id_carrito !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_producto']) && !isset($_POST['action'])) {
+
     $id_producto = (int)($_POST['id_producto'] ?? 0);
     $cantidad    = isset($_POST['cantidad']) && is_numeric($_POST['cantidad']) ? (float)$_POST['cantidad'] : 1;
     if ($cantidad < 1) $cantidad = 1;
@@ -38,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_producto']) && !is
 }
 
 // Quitar cierta cantidad de un ítem concreto
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'remove_part') {
+if (!$error && $id_carrito !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'remove_part') {
     $id_item_carrito   = (int)($_POST['id_item_carrito'] ?? 0);
     $cantidad_remover  = isset($_POST['cantidad_remover']) && is_numeric($_POST['cantidad_remover'])
         ? (float)$_POST['cantidad_remover'] : 1;
@@ -50,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Eliminar todo el ítem (atajo)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'remove_all') {
+if (!$error && $id_carrito !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'remove_all') {
     $id_item_carrito = (int)($_POST['id_item_carrito'] ?? 0);
     ClientController::eliminarItem($conn, $id_carrito, $id_item_carrito);
     header("Location: carrito.php");
@@ -58,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Traer items del carrito
-$items = ClientController::obtenerItems($conn, $id_carrito);
+$items = (!$error && $id_carrito !== null) ? ClientController::obtenerItems($conn, $id_carrito) : [];
 
 // Calcular total
 $total = 0;
@@ -81,7 +87,9 @@ foreach ($items as $it) {
 <div class="container my-4">
   <h1 class="h3 mb-4">Tu carrito</h1>
 
-  <?php if (empty($items)): ?>
+  <?php if ($error): ?>
+    <div class="alert alert-danger"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
+  <?php elseif (empty($items)): ?>
     <div class="alert alert-info">Tu carrito está vacío.</div>
     <a href="catalogo.php" class="btn btn-primary">← Ir al catálogo</a>
   <?php else: ?>

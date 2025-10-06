@@ -10,31 +10,43 @@
   $id_usuario = $isCliente ? (int)$_SESSION['user']['id'] : null;
 
   // Obtener carrito universal (cliente o invitado)
-  // Map id_usuario to id_cliente
-  $stmt = $conn->prepare("SELECT id_cliente FROM CLIENTE WHERE id_usuario = ?");
-  $stmt->execute([$id_usuario]);
-  $row = $stmt->fetch(PDO::FETCH_ASSOC);
-  if (!$row) {
-      die("No tienes acceso a esta página o no eres un cliente registrado.");
+  $id_cliente = null;
+  $mensaje = "";
+  $codigoPedido = null;
+
+  if ($isCliente) {
+      $stmt = $conn->prepare("SELECT id_cliente FROM CLIENTE WHERE id_usuario = ?");
+      $stmt->execute([$id_usuario]);
+      $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+      if ($row) {
+          $id_cliente = (int)$row['id_cliente'];
+      } else {
+          $mensaje = "❁ENo encontramos información de cliente asociada a tu cuenta.";
+      }
   }
-  $id_cliente = $row['id_cliente'];
 
-  $carrito = ClientController::obtenerCarritoUniversal($conn, $id_cliente);
-  if (!$carrito) {
-      die("No hay carrito disponible para tu tipo de usuario.");
-  }
-  $id_carrito = (int)$carrito['id_carrito'];
+  $carrito = null;
+  $id_carrito = null;
+  $items = [];
 
-  // Traer items para mostrar resumen
-  $items = ClientController::obtenerItems($conn, $id_carrito);
+  if ($mensaje === "") {
+      $carrito = ClientController::obtenerCarritoUniversal($conn, $id_cliente ?? $id_usuario);
+      if (!$carrito) {
+          $mensaje = "❁ENo tienes acceso a esta página o no eres un cliente registrado.";
+      } else {
+          $id_carrito = (int)$carrito['id_carrito'];
+          $items = ClientController::obtenerItems($conn, $id_carrito);
 
-  // Si no hay items, no hay qué pagar
-  if (empty($items)) {
-      header("Location: carrito.php");
-      exit;
+          if (empty($items) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+              header("Location: carrito.php");
+              exit;
+          }
+      }
   }
 
   // 🔹 OPERADOR: obtener el primer operador disponible (y opcionalmente su nombre)
+
   $opStmt = $conn->query("
       SELECT o.id_operador, u.nombre, u.apellido
       FROM OPERADOR o
@@ -43,9 +55,6 @@
       LIMIT 1
   ");
   $operador = $opStmt->fetch(PDO::FETCH_ASSOC);
-
-  $mensaje = "";
-  $codigoPedido = null;
 
   // Calcular total
   $total = 0;
@@ -58,8 +67,12 @@
 
   // Procesar envío del formulario
   if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-      if (!$hayOperador) {
-          $mensaje = "❌ No hay operadores disponibles para asignar a tu pedido. Intenta más tarde.";
+      if ($mensaje !== "" || $id_carrito === null) {
+          if ($mensaje === "") {
+              $mensaje = "❁ENo se pudo procesar tu pedido en este momento.";
+          }
+      } elseif (!$hayOperador) {
+          $mensaje = "❁ENo hay operadores disponibles para asignar a tu pedido. Intenta más tarde.";
       } else {
           $metodo_pago = $_POST['metodo_pago'] ?? 'efectivo';
           $lugar_retiro = $_POST['lugar_retiro'] ?? 'tienda';
@@ -68,7 +81,7 @@
               if ($isCliente) {
                   // Flujo actual para clientes registrados (la asignación de operador la hace el método)
                   $codigoPedido = ClientController::realizarPedido($conn, $id_cliente, $id_carrito, $metodo_pago, $lugar_retiro);
-                  $mensaje = "✅ Pedido realizado. Tu código de verificación es: <strong>" . htmlspecialchars($codigoPedido) . "</strong>";
+                  $mensaje = "✁EPedido realizado. Tu código de verificación es: <strong>" . htmlspecialchars($codigoPedido) . "</strong>";
               } else {
                   // Flujo invitado (la asignación de operador la hace el método)
                   $guest_nombre   = trim($_POST['guest_nombre'] ?? '');
@@ -76,7 +89,7 @@
                   $guest_telefono = trim($_POST['guest_telefono'] ?? '');
 
                   if ($guest_nombre === '' || !filter_var($guest_email, FILTER_VALIDATE_EMAIL)) {
-                      $mensaje = "❌ Por favor, ingresa un nombre y email válidos.";
+                      $mensaje = "❁EPor favor, ingresa un nombre y email válidos.";
                   } else {
                       $codigoPedido = ClientController::realizarPedidoInvitado(
                           $conn,
@@ -87,11 +100,11 @@
                           $metodo_pago,
                           $lugar_retiro
                       );
-                      $mensaje = "✅ Pedido realizado como invitado. Tu código de verificación es: <strong>" . htmlspecialchars($codigoPedido) . "</strong>";
+                      $mensaje = "✁EPedido realizado como invitado. Tu código de verificación es: <strong>" . htmlspecialchars($codigoPedido) . "</strong>";
                   }
               }
           } catch (Exception $e) {
-              $mensaje = "❌ Error al procesar el pedido: " . htmlspecialchars($e->getMessage());
+              $mensaje = "❁EError al procesar el pedido: " . htmlspecialchars($e->getMessage());
           }
       }
   }
@@ -128,7 +141,7 @@
     <?php endif; ?>
   <?php endif; ?>
 
-  <?php if (!$codigoPedido && $hayOperador): ?>
+  <?php if (!$codigoPedido && $hayOperador && $id_carrito !== null): ?>
     <!-- Info de operador asignable (opcional mostrar) -->
     <div class="alert alert-info py-2">
       <small>
@@ -216,7 +229,7 @@
       </div>
 
       <div class="col-12">
-        <button class="btn btn成功 btn-success">Confirmar pedido</button>
+        <button class="btn btn-success">Confirmar pedido</button>
         <a href="carrito.php" class="btn btn-outline-secondary">Volver al carrito</a>
       </div>
     </form>
