@@ -367,8 +367,17 @@ class PlantillaCategoriaController {
     }
 
     public static function actualizarColeccion(PDO $conn, int $id, string $nombre, bool $activa): void {
-        $stmt = $conn->prepare("UPDATE PLANTILLA_CAT SET nombre = :n, activa = :a WHERE id_plantilla_cat = :id");
-        $stmt->execute([':n' => $nombre, ':a' => $activa ? 1 : 0, ':id' => $id]);
+        $conn->beginTransaction();
+        try {
+            $stmt = $conn->prepare("UPDATE PLANTILLA_CAT SET nombre = :n, activa = :a WHERE id_plantilla_cat = :id");
+            $stmt->execute([':n' => $nombre, ':a' => $activa ? 1 : 0, ':id' => $id]);
+
+            self::sincronizarEstadoCategoriasYProductos($conn, $id, $activa);
+            $conn->commit();
+        } catch (Throwable $e) {
+            $conn->rollBack();
+            throw $e;
+        }
     }
 
     public static function eliminarColeccion(PDO $conn, int $id): void {
@@ -377,8 +386,17 @@ class PlantillaCategoriaController {
     }
 
     public static function setActiva(PDO $conn, int $id, bool $activa): void {
-        $stmt = $conn->prepare("UPDATE PLANTILLA_CAT SET activa = :a WHERE id_plantilla_cat = :id");
-        $stmt->execute([':a' => $activa ? 1 : 0, ':id' => $id]);
+        $conn->beginTransaction();
+        try {
+            $stmt = $conn->prepare("UPDATE PLANTILLA_CAT SET activa = :a WHERE id_plantilla_cat = :id");
+            $stmt->execute([':a' => $activa ? 1 : 0, ':id' => $id]);
+
+            self::sincronizarEstadoCategoriasYProductos($conn, $id, $activa);
+            $conn->commit();
+        } catch (Throwable $e) {
+            $conn->rollBack();
+            throw $e;
+        }
     }
 
     public static function obtenerCategoriasAdmin(PDO $conn): array {
@@ -439,9 +457,22 @@ class PlantillaCategoriaController {
     public static function guardarCategoriasDeColeccion(PDO $conn, int $id_plantilla_cat, array $catIds, array $ordenes): void {
         $conn->beginTransaction();
         try {
+            $estadoStmt = $conn->prepare("SELECT activa FROM PLANTILLA_CAT WHERE id_plantilla_cat = ? FOR UPDATE");
+            $estadoStmt->execute([$id_plantilla_cat]);
+            $rowEstado = $estadoStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$rowEstado) {
+                throw new RuntimeException('Colección no encontrada.');
+            }
+            $coleccionActiva = !empty($rowEstado['activa']);
+
+            $prevStmt = $conn->prepare("SELECT id_categoria FROM PLANTILLA_CAT_ITEM WHERE id_plantilla_cat = ? FOR UPDATE");
+            $prevStmt->execute([$id_plantilla_cat]);
+            $prevCats = array_map('intval', $prevStmt->fetchAll(PDO::FETCH_COLUMN));
+
             $del = $conn->prepare("DELETE FROM PLANTILLA_CAT_ITEM WHERE id_plantilla_cat = ?");
             $del->execute([$id_plantilla_cat]);
 
+            $nuevoSet = [];
             if (!empty($catIds)) {
                 $ins = $conn->prepare("
                   INSERT INTO PLANTILLA_CAT_ITEM (id_plantilla_cat, id_categoria, orden)
@@ -449,17 +480,56 @@ class PlantillaCategoriaController {
                 ");
                 foreach ($catIds as $cid) {
                     if (!ctype_digit((string)$cid)) continue;
-                    $cid   = (int)$cid;
+                    $cid = (int)$cid;
+                    if (isset($nuevoSet[$cid])) continue;
                     $orden = isset($ordenes[$cid]) && is_numeric($ordenes[$cid]) ? (int)$ordenes[$cid] : 0;
                     $ins->execute([':p' => $id_plantilla_cat, ':c' => $cid, ':o' => $orden]);
+                    $nuevoSet[$cid] = true;
                 }
             }
 
+            $nuevosIds = array_keys($nuevoSet);
+            $removidos = array_diff($prevCats, $nuevosIds);
+            if (!empty($removidos)) {
+                self::actualizarEstadoCategoriasYProductos($conn, $removidos, true);
+            }
+
+            self::sincronizarEstadoCategoriasYProductos($conn, $id_plantilla_cat, $coleccionActiva);
             $conn->commit();
         } catch (Throwable $e) {
             $conn->rollBack();
             throw $e;
         }
+    }
+
+    private static function sincronizarEstadoCategoriasYProductos(PDO $conn, int $id_plantilla_cat, bool $activa): void {
+        $stmt = $conn->prepare("SELECT id_categoria FROM PLANTILLA_CAT_ITEM WHERE id_plantilla_cat = ?");
+        $stmt->execute([$id_plantilla_cat]);
+        $ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+        if (empty($ids)) {
+            return;
+        }
+
+        self::actualizarEstadoCategoriasYProductos($conn, $ids, $activa);
+    }
+
+    private static function actualizarEstadoCategoriasYProductos(PDO $conn, array $ids, bool $activa): void {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        if (empty($ids)) {
+            return;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $estado = $activa ? 1 : 0;
+        $params = array_merge([$estado], $ids);
+
+        $sqlCategoria = "UPDATE CATEGORIA SET activa = ? WHERE id_categoria IN ($placeholders)";
+        $stmtCat = $conn->prepare($sqlCategoria);
+        $stmtCat->execute($params);
+
+        $sqlProducto = "UPDATE PRODUCTO SET activo = ? WHERE id_categoria IN ($placeholders)";
+        $stmtProd = $conn->prepare($sqlProducto);
+        $stmtProd->execute($params);
     }
 }
 
