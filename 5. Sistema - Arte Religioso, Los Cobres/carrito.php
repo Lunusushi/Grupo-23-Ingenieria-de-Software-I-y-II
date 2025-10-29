@@ -39,7 +39,9 @@ if (!$error && $id_carrito !== null && $_SERVER['REQUEST_METHOD'] === 'POST' && 
     if ($cantidad < 1) $cantidad = 1;
 
     ClientController::agregarProducto($conn, $id_carrito, $id_producto, $cantidad);
-    header("Location: carrito.php");
+    // Redirigir según si es compra directa
+    $goCheckout = isset($_POST['checkout']) && (string)$_POST['checkout'] === '1';
+    header("Location: " . ($goCheckout ? 'realizar_pedido.php' : 'carrito.php'));
     exit;
 }
 

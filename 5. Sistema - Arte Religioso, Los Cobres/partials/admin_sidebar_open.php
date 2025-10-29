@@ -1,16 +1,16 @@
 <?php
-// partials/admin_sidebar_open.php
-if (session_status() === PHP_SESSION_NONE) session_start();
+  // partials/admin_sidebar_open.php
+  if (session_status() === PHP_SESSION_NONE) session_start();
 
-$user     = $_SESSION['user'] ?? null;
-$userType = $user['type']   ?? ($_SESSION['user_type'] ?? null);
-$cargo    = $user['cargo']  ?? ($_SESSION['cargo'] ?? null);
+  $user     = $_SESSION['user'] ?? null;
+  $userType = $user['type']   ?? ($_SESSION['user_type'] ?? null);
+  $cargo    = $user['cargo']  ?? ($_SESSION['cargo'] ?? null);
 
-// Guard de acceso: sólo operadores con cargo
-if ($userType !== 'operador' || !$cargo) {
-  header('Location: login.php');
-  exit;
-}
+  // Guard de acceso: sólo operadores con cargo
+  if ($userType !== 'operador' || !$cargo) {
+    header('Location: login.php');
+    exit;
+  }
 ?>
 <!-- Encabezado superior con botón de menú siempre visible -->
 <header class="navbar navbar-dark bg-dark">

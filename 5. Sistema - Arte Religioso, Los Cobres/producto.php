@@ -116,6 +116,9 @@
                 <button class="btn btn-success" type="submit">🛒 Agregar</button>
               </div>
               <small class="text-muted">Stock disponible: <?= $stockEntero ?></small>
+              <div class="mt-2">
+                <button class="btn btn-warning" type="submit" name="checkout" value="1">⚡ Comprar ahora</button>
+              </div>
             </form>
           <?php else: ?>
             <button class="btn btn-secondary" disabled>Agotado</button>

@@ -1,160 +1,162 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
+  if (session_status() === PHP_SESSION_NONE) session_start();
 
-$user = $_SESSION['user'] ?? null;
-if (($user['type'] ?? null) !== 'operador') { header('Location: login.php'); exit; }
-$cargo = $_SESSION['cargo'] ?? null;
-$puedeEditar = in_array($cargo, ['administrador','mantenedor','catalogo'], true);
+  $user = $_SESSION['user'] ?? null;
+  if (($user['type'] ?? null) !== 'operador') { header('Location: login.php'); exit; }
+  $cargo = $_SESSION['cargo'] ?? null;
+  $puedeEditar = in_array($cargo, ['administrador','mantenedor','catalogo'], true);
 
-require_once __DIR__ . '/config/MySqlDb.php';
-require_once __DIR__ . '/controllers/ProductController.php';
+  require_once __DIR__ . '/config/MySqlDb.php';
+  require_once __DIR__ . '/controllers/ProductController.php';
 
-$flash = '';
-$editando = false;
-$tpl = null;
+  $flash = '';
+  $editando = false;
+  $tpl = null;
 
-/* Modo edición */
-if (isset($_GET['editar']) && ctype_digit((string)$_GET['editar'])) {
-  $tpl = PlantillaController::obtener($conn, (int)$_GET['editar']);
-  if ($tpl) $editando = true;
-}
+  /* Modo edición */
+  if (isset($_GET['editar']) && ctype_digit((string)$_GET['editar'])) {
+    $tpl = PlantillaController::obtener($conn, (int)$_GET['editar']);
+    if ($tpl) $editando = true;
+  }
 
-/* Acciones (POST) */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $puedeEditar) {
-  $action = $_POST['action'] ?? '';
+  /* Acciones (POST) */
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && $puedeEditar) {
+    $action = $_POST['action'] ?? '';
 
-  if ($action === 'create') {
-    $nombre = trim($_POST['nombre'] ?? '');
-    $activa = isset($_POST['activa']);
-    if ($nombre === '') {
-      $flash = '❌ El nombre es obligatorio.';
-    } else {
-      try {
-        PlantillaController::crear($conn, $nombre, $activa);
-        $flash = '✅ Plantilla creada.';
-      } catch (Throwable $ex) {
-        // Manejo de duplicados (1062)
-        $msg = '❌ Error al crear la plantilla.';
-        if ($ex instanceof PDOException && isset($ex->errorInfo[1]) && (int)$ex->errorInfo[1] === 1062) {
-          $msg = '⚠️ Ya existe una plantilla con ese nombre.';
-        } elseif ($ex->getMessage()) {
-          $msg = $ex->getMessage();
+    if ($action === 'create') {
+      $nombre = trim($_POST['nombre'] ?? '');
+      $activa = isset($_POST['activa']);
+      if ($nombre === '') {
+        $flash = '❌ El nombre es obligatorio.';
+      } else {
+        try {
+          PlantillaController::crear($conn, $nombre, $activa);
+          $flash = '✅ Plantilla creada.';
+        } catch (Throwable $ex) {
+          // Manejo de duplicados (1062)
+          $msg = '❌ Error al crear la plantilla.';
+          if ($ex instanceof PDOException && isset($ex->errorInfo[1]) && (int)$ex->errorInfo[1] === 1062) {
+            $msg = '⚠️ Ya existe una plantilla con ese nombre.';
+          } elseif ($ex->getMessage()) {
+            $msg = $ex->getMessage();
+          }
+          $flash = $msg;
         }
-        $flash = $msg;
       }
+      header('Location: admin_plantillas_productos.php?msg='.urlencode($flash));
+      exit;
     }
-    header('Location: admin_plantillas_productos.php?msg='.urlencode($flash));
-    exit;
-  }
 
-  if ($action === 'rename') {
-    $id = (int)($_POST['id_plantilla'] ?? 0);
-    $nombre = trim($_POST['nombre'] ?? '');
-    if ($id && $nombre !== '') {
-      try {
-        PlantillaController::renombrar($conn, $id, $nombre);
-        $flash = '✏️ Nombre actualizado.';
-      } catch (Throwable $ex) {
-        $msg = '❌ Error al renombrar.';
-        if ($ex instanceof PDOException && isset($ex->errorInfo[1]) && (int)$ex->errorInfo[1] === 1062) {
-          $msg = '⚠️ Ya existe una plantilla con ese nombre.';
-        } elseif ($ex->getMessage()) {
-          $msg = $ex->getMessage();
+    if ($action === 'rename') {
+      $id = (int)($_POST['id_plantilla'] ?? 0);
+      $nombre = trim($_POST['nombre'] ?? '');
+      if ($id && $nombre !== '') {
+        try {
+          PlantillaController::renombrar($conn, $id, $nombre);
+          $flash = '✏️ Nombre actualizado.';
+        } catch (Throwable $ex) {
+          $msg = '❌ Error al renombrar.';
+          if ($ex instanceof PDOException && isset($ex->errorInfo[1]) && (int)$ex->errorInfo[1] === 1062) {
+            $msg = '⚠️ Ya existe una plantilla con ese nombre.';
+          } elseif ($ex->getMessage()) {
+            $msg = $ex->getMessage();
+          }
+          $flash = $msg;
         }
-        $flash = $msg;
+      } else {
+        $flash = '❌ Falta el nuevo nombre.';
       }
-    } else {
-      $flash = '❌ Falta el nuevo nombre.';
+      header('Location: admin_plantillas_productos.php?editar='.$id.'&msg='.urlencode($flash));
+      exit;
     }
-    header('Location: admin_plantillas_productos.php?editar='.$id.'&msg='.urlencode($flash));
-    exit;
-  }
 
-  if ($action === 'toggle') {
-    $id = (int)($_POST['id_plantilla'] ?? 0);
-    $val = (int)($_POST['nuevo_activa'] ?? 1);
-    try {
-      PlantillaController::setActiva($conn, $id, (bool)$val);
-      $flash = $val ? '✅ Plantilla activada.' : '⛔ Plantilla desactivada.';
-    } catch (Throwable $ex) {
-      $flash = '❌ No se pudo cambiar el estado.';
-    }
-    header('Location: admin_plantillas_productos.php?editar='.$id.'&msg='.urlencode($flash));
-    exit;
-  }
-
-  if ($action === 'delete') {
-    $id = (int)($_POST['id_plantilla'] ?? 0);
-    try {
-      PlantillaController::eliminar($conn, $id);
-      $flash = '🗑️ Plantilla eliminada.';
-    } catch (Throwable $ex) {
-      $flash = '❌ No se pudo eliminar la plantilla.';
-    }
-    header('Location: admin_plantillas_productos.php?msg='.urlencode($flash));
-    exit;
-  }
-
-  /* Ítems */
-  if ($action === 'add_item') {
-    $id    = (int)($_POST['id_plantilla'] ?? 0);
-    $prod  = (int)($_POST['id_producto'] ?? 0);
-    $orden = (int)($_POST['orden'] ?? 0);
-    if ($id && $prod) {
+    if ($action === 'toggle') {
+      $id = (int)($_POST['id_plantilla'] ?? 0);
+      $val = (int)($_POST['nuevo_activa'] ?? 1);
       try {
-        PlantillaController::agregarProducto($conn, $id, $prod, $orden); // hace upsert por PK compuesto
-        $flash = '✅ Producto añadido.';
+        PlantillaController::setActiva($conn, $id, (bool)$val);
+        // Sincroniza también el estado de todos los productos asociados a esta plantilla
+        $count = PlantillaController::activarPorPlantilla($conn, $id, (bool)$val);
+        $flash = $val ? '✅ Plantilla activada.' : '⛔ Plantilla desactivada.';
       } catch (Throwable $ex) {
-        $flash = '❌ No se pudo añadir el producto.';
+        $flash = '❌ No se pudo cambiar el estado.';
       }
+      header('Location: admin_plantillas_productos.php?editar='.$id.'&msg='.urlencode($flash));
+      exit;
     }
-    header('Location: admin_plantillas_productos.php?editar='.$id.'&msg='.urlencode($flash));
-    exit;
+
+    if ($action === 'delete') {
+      $id = (int)($_POST['id_plantilla'] ?? 0);
+      try {
+        PlantillaController::eliminar($conn, $id);
+        $flash = '🗑️ Plantilla eliminada.';
+      } catch (Throwable $ex) {
+        $flash = '❌ No se pudo eliminar la plantilla.';
+      }
+      header('Location: admin_plantillas_productos.php?msg='.urlencode($flash));
+      exit;
+    }
+
+    /* Ítems */
+    if ($action === 'add_item') {
+      $id    = (int)($_POST['id_plantilla'] ?? 0);
+      $prod  = (int)($_POST['id_producto'] ?? 0);
+      $orden = (int)($_POST['orden'] ?? 0);
+      if ($id && $prod) {
+        try {
+          PlantillaController::agregarProducto($conn, $id, $prod, $orden); // hace upsert por PK compuesto
+          $flash = '✅ Producto añadido.';
+        } catch (Throwable $ex) {
+          $flash = '❌ No se pudo añadir el producto.';
+        }
+      }
+      header('Location: admin_plantillas_productos.php?editar='.$id.'&msg='.urlencode($flash));
+      exit;
+    }
+
+    if ($action === 'rm_item') {
+      $id   = (int)($_POST['id_plantilla'] ?? 0);
+      $prod = (int)($_POST['id_producto'] ?? 0);
+      try {
+        PlantillaController::quitarProducto($conn, $id, $prod);
+        $flash = '🗑️ Producto quitado.';
+      } catch (Throwable $ex) {
+        $flash = '❌ No se pudo quitar el producto.';
+      }
+      header('Location: admin_plantillas_productos.php?editar='.$id.'&msg='.urlencode($flash));
+      exit;
+    }
+
+    if ($action === 'set_order') {
+      $id    = (int)($_POST['id_plantilla'] ?? 0);
+      $prod  = (int)($_POST['id_producto'] ?? 0);
+      $orden = (int)($_POST['orden'] ?? 0);
+      try {
+        PlantillaController::setOrden($conn, $id, $prod, $orden);
+        $flash = '🔢 Orden actualizado.';
+      } catch (Throwable $ex) {
+        $flash = '❌ No se pudo actualizar el orden.';
+      }
+      header('Location: admin_plantillas_productos.php?editar='.$id.'&msg='.urlencode($flash));
+      exit;
+    }
+
+    if ($action === 'bulk_activate' || $action === 'bulk_deactivate') {
+      $id      = (int)($_POST['id_plantilla'] ?? 0);
+      $activar = ($action === 'bulk_activate');
+      try {
+        $count = PlantillaController::activarPorPlantilla($conn, $id, $activar);
+        $flash = ($activar ? '✅ Activados ' : '⛔ Desactivados ').(int)$count.' producto(s).';
+      } catch (Throwable $ex) {
+        $flash = '❌ No se pudo completar la acción masiva.';
+      }
+      header('Location: admin_plantillas_productos.php?editar='.$id.'&msg='.urlencode($flash));
+      exit;
+    }
   }
 
-  if ($action === 'rm_item') {
-    $id   = (int)($_POST['id_plantilla'] ?? 0);
-    $prod = (int)($_POST['id_producto'] ?? 0);
-    try {
-      PlantillaController::quitarProducto($conn, $id, $prod);
-      $flash = '🗑️ Producto quitado.';
-    } catch (Throwable $ex) {
-      $flash = '❌ No se pudo quitar el producto.';
-    }
-    header('Location: admin_plantillas_productos.php?editar='.$id.'&msg='.urlencode($flash));
-    exit;
-  }
-
-  if ($action === 'set_order') {
-    $id    = (int)($_POST['id_plantilla'] ?? 0);
-    $prod  = (int)($_POST['id_producto'] ?? 0);
-    $orden = (int)($_POST['orden'] ?? 0);
-    try {
-      PlantillaController::setOrden($conn, $id, $prod, $orden);
-      $flash = '🔢 Orden actualizado.';
-    } catch (Throwable $ex) {
-      $flash = '❌ No se pudo actualizar el orden.';
-    }
-    header('Location: admin_plantillas_productos.php?editar='.$id.'&msg='.urlencode($flash));
-    exit;
-  }
-
-  if ($action === 'bulk_activate' || $action === 'bulk_deactivate') {
-    $id      = (int)($_POST['id_plantilla'] ?? 0);
-    $activar = ($action === 'bulk_activate');
-    try {
-      $count = PlantillaController::activarPorPlantilla($conn, $id, $activar);
-      $flash = ($activar ? '✅ Activados ' : '⛔ Desactivados ').(int)$count.' producto(s).';
-    } catch (Throwable $ex) {
-      $flash = '❌ No se pudo completar la acción masiva.';
-    }
-    header('Location: admin_plantillas_productos.php?editar='.$id.'&msg='.urlencode($flash));
-    exit;
-  }
-}
-
-if (isset($_GET['msg'])) $flash = $_GET['msg'];
-$plantillas = PlantillaController::listar($conn);
+  if (isset($_GET['msg'])) $flash = $_GET['msg'];
+  $plantillas = PlantillaController::listar($conn);
 ?>
 <!DOCTYPE html>
 <html lang="es">

@@ -1,80 +1,80 @@
 <?php
-session_start();
-require_once 'config/MySqlDb.php'; // This file sets up $conn as PDO instance
+    session_start();
+    require_once 'config/MySqlDb.php'; // This file sets up $conn as PDO instance
 
-// Guard de acceso: sólo operadores con cargo
-$user     = $_SESSION['user'] ?? null;
-$userType = $user['type']   ?? ($_SESSION['user_type'] ?? null);
-$cargo    = $user['cargo']  ?? ($_SESSION['cargo'] ?? null);
+    // Guard de acceso: sólo operadores con cargo
+    $user     = $_SESSION['user'] ?? null;
+    $userType = $user['type']   ?? ($_SESSION['user_type'] ?? null);
+    $cargo    = $user['cargo']  ?? ($_SESSION['cargo'] ?? null);
 
-if ($userType !== 'operador' || !$cargo) {
-  header('Location: login.php');
-  exit;
-}
+    if ($userType !== 'operador' || !$cargo) {
+    header('Location: login.php');
+    exit;
+    }
 
-$start_date = $_GET['start_date'] ?? '';
-$end_date = $_GET['end_date'] ?? '';
+    $start_date = $_GET['start_date'] ?? '';
+    $end_date = $_GET['end_date'] ?? '';
 
-// Validate and prepare date filters
-$dateFilter = '';
-$params = [];
+    // Validate and prepare date filters
+    $dateFilter = '';
+    $params = [];
 
-if ($start_date && $end_date) {
-    $dateFilter = "AND p.fecha_pedido BETWEEN ? AND ?";
-    $params[] = $start_date . " 00:00:00";
-    $params[] = $end_date . " 23:59:59";
-} elseif ($start_date) {
-    $dateFilter = "AND p.fecha_pedido >= ?";
-    $params[] = $start_date . " 00:00:00";
-} elseif ($end_date) {
-    $dateFilter = "AND p.fecha_pedido <= ?";
-    $params[] = $end_date . " 23:59:59";
-}
+    if ($start_date && $end_date) {
+        $dateFilter = "AND p.fecha_pedido BETWEEN ? AND ?";
+        $params[] = $start_date . " 00:00:00";
+        $params[] = $end_date . " 23:59:59";
+    } elseif ($start_date) {
+        $dateFilter = "AND p.fecha_pedido >= ?";
+        $params[] = $start_date . " 00:00:00";
+    } elseif ($end_date) {
+        $dateFilter = "AND p.fecha_pedido <= ?";
+        $params[] = $end_date . " 23:59:59";
+    }
 
-try {
-    $stmt = $conn->prepare("
-        SELECT 
-            COUNT(*) AS total_sales,
-            COALESCE(SUM(dp.subtotal), 0) AS total_revenue
-        FROM PEDIDO p
-        LEFT JOIN DETALLE_PEDIDO dp ON p.id_pedido = dp.id_pedido
-        WHERE p.estado = 'completado' $dateFilter
-    ");
-    $stmt->execute($params);
-    $salesMetrics = $stmt->fetch(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    $salesMetrics = ['total_sales' => 0, 'total_revenue' => 0];
-}
+    try {
+        $stmt = $conn->prepare("
+            SELECT 
+                COUNT(*) AS total_sales,
+                COALESCE(SUM(dp.subtotal), 0) AS total_revenue
+            FROM PEDIDO p
+            LEFT JOIN DETALLE_PEDIDO dp ON p.id_pedido = dp.id_pedido
+            WHERE p.estado = 'completado' $dateFilter
+        ");
+        $stmt->execute($params);
+        $salesMetrics = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $salesMetrics = ['total_sales' => 0, 'total_revenue' => 0];
+    }
 
-// Fetch top products by quantity sold (top 5)
-try {
-    $stmt = $conn->prepare("
-        SELECT p.id_producto, p.nombre_producto, COALESCE(SUM(dp.cantidad), 0) AS total_sold
-        FROM DETALLE_PEDIDO dp
-        JOIN PRODUCTO p ON dp.id_producto = p.id_producto
-        GROUP BY p.id_producto, p.nombre_producto
-        ORDER BY total_sold DESC
-        LIMIT 5
-    ");
-    $stmt->execute();
-    $topProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    $topProducts = [];
-}
+    // Fetch top products by quantity sold (top 5)
+    try {
+        $stmt = $conn->prepare("
+            SELECT p.id_producto, p.nombre_producto, COALESCE(SUM(dp.cantidad), 0) AS total_sold
+            FROM DETALLE_PEDIDO dp
+            JOIN PRODUCTO p ON dp.id_producto = p.id_producto
+            GROUP BY p.id_producto, p.nombre_producto
+            ORDER BY total_sold DESC
+            LIMIT 5
+        ");
+        $stmt->execute();
+        $topProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $topProducts = [];
+    }
 
-// Fetch products with low stock (stock_actual < 10)
-try {
-    $stmt = $conn->prepare("
-        SELECT id_producto, nombre_producto, stock_actual
-        FROM PRODUCTO
-        WHERE stock_actual < 10
-        ORDER BY stock_actual ASC
-    ");
-    $stmt->execute();
-    $lowStockProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    $lowStockProducts = [];
-}
+    // Fetch products with low stock (stock_actual < 10)
+    try {
+        $stmt = $conn->prepare("
+            SELECT id_producto, nombre_producto, stock_actual
+            FROM PRODUCTO
+            WHERE stock_actual < 10
+            ORDER BY stock_actual ASC
+        ");
+        $stmt->execute();
+        $lowStockProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $lowStockProducts = [];
+    }
 
 ?>
 <!DOCTYPE html>

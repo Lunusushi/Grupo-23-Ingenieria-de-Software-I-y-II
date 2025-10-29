@@ -1,97 +1,97 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) session_start();
+  if (session_status() === PHP_SESSION_NONE) session_start();
 
-require_once __DIR__ . '/config/MySqlDb.php';
-require_once __DIR__ . '/controllers/ProductController.php';
+  require_once __DIR__ . '/config/MySqlDb.php';
+  require_once __DIR__ . '/controllers/ProductController.php';
 
-// Guard de rol
-$user = $_SESSION['user'] ?? null;
-$cargo = $_SESSION['cargo'] ?? null;
-if (($user['type'] ?? null) !== 'operador' || !in_array($cargo, ['administrador','mantenedor','catalogo'], true)) {
-  http_response_code(403);
-  die('<div class="container my-5"><div class="alert alert-danger">No autorizado.</div></div>');
-}
-
-$flashOk = '';
-$flashErr = '';
-$editando = false;
-$catEdit  = null;
-
-// Para selects de padre
-$catsAll = PlantillaCategoriaController::obtenerCategoriasAdmin($conn);
-
-// Modo edición
-if (isset($_GET['editar']) && ctype_digit((string)$_GET['editar'])) {
-  $idc = (int)$_GET['editar'];
-  foreach ($catsAll as $c) {
-    if ((int)$c['id_categoria'] === $idc) {
-      $catEdit  = $c;
-      $editando = true;
-      break;
-    }
+  // Guard de rol
+  $user = $_SESSION['user'] ?? null;
+  $cargo = $_SESSION['cargo'] ?? null;
+  if (($user['type'] ?? null) !== 'operador' || !in_array($cargo, ['administrador','mantenedor','catalogo'], true)) {
+    http_response_code(403);
+    die('<div class="container my-5"><div class="alert alert-danger">No autorizado.</div></div>');
   }
-}
 
-// POST actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $action = $_POST['action'] ?? '';
+  $flashOk = '';
+  $flashErr = '';
+  $editando = false;
+  $catEdit  = null;
 
-  if ($action === 'create') {
-    $nombre = trim($_POST['nombre_categoria'] ?? '');
-    $desc   = trim($_POST['descripcion_categoria'] ?? '');
-    $padre  = $_POST['id_padre'] !== '' ? (int)$_POST['id_padre'] : null;
-    $activa = isset($_POST['activa']);
+  // Para selects de padre
+  $catsAll = PlantillaCategoriaController::obtenerCategoriasAdmin($conn);
 
-    if ($nombre === '') {
-      $flashErr = 'El nombre es obligatorio.';
-    } else {
-      PlantillaCategoriaController::crearCategoria($conn, $nombre, $desc ?: null, $padre, $activa);
-      $flashOk = '✅ Categoría creada.';
+  // Modo edición
+  if (isset($_GET['editar']) && ctype_digit((string)$_GET['editar'])) {
+    $idc = (int)$_GET['editar'];
+    foreach ($catsAll as $c) {
+      if ((int)$c['id_categoria'] === $idc) {
+        $catEdit  = $c;
+        $editando = true;
+        break;
+      }
     }
   }
 
-  if ($action === 'update' && isset($_POST['id_categoria']) && ctype_digit((string)$_POST['id_categoria'])) {
-    $idc    = (int)$_POST['id_categoria'];
-    $nombre = trim($_POST['nombre_categoria'] ?? '');
-    $desc   = trim($_POST['descripcion_categoria'] ?? '');
-    $padre  = $_POST['id_padre'] !== '' ? (int)$_POST['id_padre'] : null;
+  // POST actions
+  if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
 
-    if ($nombre === '') {
-      $flashErr = 'El nombre es obligatorio.';
-    } else {
-      // Evitar poner la categoría como hija de sí misma
-      if ($padre === $idc) $padre = null;
-      PlantillaCategoriaController::actualizarCategoria($conn, $idc, $nombre, $desc ?: null, $padre);
-      $flashOk = '✅ Categoría actualizada.';
+    if ($action === 'create') {
+      $nombre = trim($_POST['nombre_categoria'] ?? '');
+      $desc   = trim($_POST['descripcion_categoria'] ?? '');
+      $padre  = $_POST['id_padre'] !== '' ? (int)$_POST['id_padre'] : null;
+      $activa = isset($_POST['activa']);
+
+      if ($nombre === '') {
+        $flashErr = 'El nombre es obligatorio.';
+      } else {
+        PlantillaCategoriaController::crearCategoria($conn, $nombre, $desc ?: null, $padre, $activa);
+        $flashOk = '✅ Categoría creada.';
+      }
     }
-  }
 
-  if ($action === 'toggle' && isset($_POST['id_categoria'], $_POST['nuevo_activa'])) {
-    $idc   = (int)$_POST['id_categoria'];
-    $nuevo = ((int)$_POST['nuevo_activa'] === 1);
-    PlantillaCategoriaController::setCategoriaActiva($conn, $idc, $nuevo);
-    $flashOk = $nuevo ? '✅ Categoría activada.' : '⛔ Categoría desactivada.';
-  }
+    if ($action === 'update' && isset($_POST['id_categoria']) && ctype_digit((string)$_POST['id_categoria'])) {
+      $idc    = (int)$_POST['id_categoria'];
+      $nombre = trim($_POST['nombre_categoria'] ?? '');
+      $desc   = trim($_POST['descripcion_categoria'] ?? '');
+      $padre  = $_POST['id_padre'] !== '' ? (int)$_POST['id_padre'] : null;
 
-  if ($action === 'delete' && isset($_POST['id_categoria'])) {
-    $idc = (int)$_POST['id_categoria'];
-    $res = PlantillaCategoriaController::eliminarCategoria($conn, $idc);
-    if ($res === true) {
-      $flashOk = '🗑️ Categoría eliminada.';
-    } else {
-      $flashErr = $res; // mensaje de restricción (hijos o productos)
+      if ($nombre === '') {
+        $flashErr = 'El nombre es obligatorio.';
+      } else {
+        // Evitar poner la categoría como hija de sí misma
+        if ($padre === $idc) $padre = null;
+        PlantillaCategoriaController::actualizarCategoria($conn, $idc, $nombre, $desc ?: null, $padre);
+        $flashOk = '✅ Categoría actualizada.';
+      }
     }
+
+    if ($action === 'toggle' && isset($_POST['id_categoria'], $_POST['nuevo_activa'])) {
+      $idc   = (int)$_POST['id_categoria'];
+      $nuevo = ((int)$_POST['nuevo_activa'] === 1);
+      PlantillaCategoriaController::setCategoriaActiva($conn, $idc, $nuevo);
+      $flashOk = $nuevo ? '✅ Categoría activada.' : '⛔ Categoría desactivada.';
+    }
+
+    if ($action === 'delete' && isset($_POST['id_categoria'])) {
+      $idc = (int)$_POST['id_categoria'];
+      $res = PlantillaCategoriaController::eliminarCategoria($conn, $idc);
+      if ($res === true) {
+        $flashOk = '🗑️ Categoría eliminada.';
+      } else {
+        $flashErr = $res; // mensaje de restricción (hijos o productos)
+      }
+    }
+
+    header('Location: admin_categorias.php?ok='.urlencode($flashOk).'&err='.urlencode($flashErr));
+    exit;
   }
 
-  header('Location: admin_categorias.php?ok='.urlencode($flashOk).'&err='.urlencode($flashErr));
-  exit;
-}
-
-// Mensajes
-if (isset($_GET['ok']) && $_GET['ok'] !== '')  $flashOk  = $_GET['ok'];
-if (isset($_GET['err']) && $_GET['err'] !== '') $flashErr = $_GET['err'];
-// Refrescar datos (por si hubo cambios)
-$catsAll = PlantillaCategoriaController::obtenerCategoriasAdmin($conn);
+  // Mensajes
+  if (isset($_GET['ok']) && $_GET['ok'] !== '')  $flashOk  = $_GET['ok'];
+  if (isset($_GET['err']) && $_GET['err'] !== '') $flashErr = $_GET['err'];
+  // Refrescar datos (por si hubo cambios)
+  $catsAll = PlantillaCategoriaController::obtenerCategoriasAdmin($conn);
 ?>
 <!DOCTYPE html>
 <html lang="es">
