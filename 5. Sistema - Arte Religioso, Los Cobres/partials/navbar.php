@@ -51,6 +51,9 @@ $cargo     = $_SESSION['user']['cargo'] ?? ($_SESSION['cargo'] ?? null);
             <li class="nav-item"><a class="nav-link" href="direcciones.php">Mis direcciones</a></li>
             <li class="nav-item"><a class="nav-link" href="historial.php">Historial</a></li>
           <?php endif; ?>
+          <?php if ($userType === 'operador'): ?>
+            <li class="nav-item"><a class="nav-link" href="admin_index.php">Volver a Administración</a></li>
+          <?php endif; ?>
           <li class="nav-item d-flex align-items-center">
             <span class="me-3 text-white"><?= htmlspecialchars($user['name']) ?></span>
             <a class="nav-link text-danger" href="logout.php">Cerrar sesión</a>
