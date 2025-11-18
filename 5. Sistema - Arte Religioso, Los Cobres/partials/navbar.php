@@ -76,7 +76,7 @@ $cargo     = $_SESSION['user']['cargo'] ?? ($_SESSION['cargo'] ?? null);
           return;
       }
 
-      fetch(`controllers/productController.php?action=buscar&q=${encodeURIComponent(query)}`)
+      fetch(`controllers/ProductController.php?action=buscar&q=${encodeURIComponent(query)}`)
           .then(response => response.json())
           .then(products => {
               suggestionsBox.innerHTML = '';

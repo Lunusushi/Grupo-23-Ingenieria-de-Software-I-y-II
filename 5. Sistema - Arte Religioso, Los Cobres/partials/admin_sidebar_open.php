@@ -94,7 +94,7 @@
     const q = input.value.trim();
     if (!q) { box.style.display='none'; box.innerHTML=''; return; }
     try {
-      const res = await fetch(`controllers/productController.php?action=buscar&q=${encodeURIComponent(q)}`);
+      const res = await fetch(`controllers/ProductController.php?action=buscar&q=${encodeURIComponent(q)}`);
       const items = await res.json();
       box.innerHTML = '';
       items.forEach(p => {
