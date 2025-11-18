@@ -5,19 +5,33 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 $mensaje = "";
+$nombre = $apellido = $email = $rut = $telefono = '';
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    // Declarar variables primero
-    $nombre = $_POST["nombre"];
-    $apellido = $_POST["apellido"];
-    $email = $_POST["email"];
-    $rut = $_POST["rut"];
-    $telefono = $_POST["telefono"];
+    // Sanitizar inputs base
+    $nombre   = trim($_POST["nombre"]   ?? '');
+    $apellido = trim($_POST["apellido"] ?? '');
+    $email    = trim($_POST["email"]    ?? '');
+    $rut      = trim($_POST["rut"]      ?? '');
+    $telefono = trim($_POST["telefono"] ?? '');
+
+    // Validaciones simples para evitar entradas peligrosas o mal formadas
+    if ($nombre === '' || !preg_match('/^[\p{L} \'\-]{1,80}$/u', $nombre)) {
+        $mensaje = "❌ Ingresa un nombre válido.";
+    } elseif ($apellido === '' || !preg_match('/^[\p{L} \'\-]{1,80}$/u', $apellido)) {
+        $mensaje = "❌ Ingresa un apellido válido.";
+    } elseif ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/\.[^.@]+$/', $email)) {
+        $mensaje = "❌ Ingresa un correo electrónico válido.";
+    } elseif ($rut === '' || strlen($rut) > 12 || !preg_match('/^[0-9]{1,11}-[0-9Kk]$/', $rut)) {
+        $mensaje = "❌ Ingresa un RUT con guion antes del dígito verificador (máx. 12 caracteres).";
+    } elseif ($telefono === '' || !preg_match('/^[0-9 +()-]{5,20}$/', $telefono)) {
+        $mensaje = "❌ Ingresa un teléfono válido.";
+    }
 
     // Validar contraseñas
-    if ($_POST["password"] !== $_POST["password2"]) {
+    if (!$mensaje && ($_POST["password"] !== ($_POST["password2"] ?? ''))) {
         $mensaje = "❌ Las contraseñas no coinciden.";
-    } else {
+    } elseif (!$mensaje) {
         $password = password_hash($_POST["password"], PASSWORD_DEFAULT);
 
         try {
@@ -65,17 +79,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Nombre</label>
-                    <input name="nombre" class="form-control" required>
+                    <input name="nombre" class="form-control" value="<?= htmlspecialchars($nombre) ?>" maxlength="80" required>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Apellido</label>
-                    <input name="apellido" class="form-control" required>
+                    <input name="apellido" class="form-control" value="<?= htmlspecialchars($apellido) ?>" maxlength="80" required>
                 </div>
             </div>
 
             <div class="mb-3">
                 <label class="form-label">Correo electrónico</label>
-                <input type="email" name="email" class="form-control" required>
+                <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($email) ?>" maxlength="120" required>
             </div>
 
             <div class="mb-3">
@@ -90,12 +104,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <div class="mb-3">
                 <label class="form-label">RUT</label>
-                <input name="rut" class="form-control" required>
+                <input name="rut" class="form-control" value="<?= htmlspecialchars($rut) ?>" maxlength="12" placeholder="12345678-9" required>
             </div>
 
             <div class="mb-3">
                 <label class="form-label">Teléfono</label>
-                <input name="telefono" class="form-control" required>
+                <input name="telefono" class="form-control" value="<?= htmlspecialchars($telefono) ?>" maxlength="20" required>
             </div>
 
             <button class="btn btn-primary w-100">Registrarme</button>

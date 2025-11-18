@@ -209,13 +209,18 @@
             <p class="text-muted mb-3">Stock: <?= htmlspecialchars((string)$p['stock_actual']) ?></p>
 
             <div class="mt-auto">
-              <form method="POST" action="carrito.php" class="d-inline">
-                <input type="hidden" name="id_producto" value="<?= (int)$p['id_producto'] ?>">
-                <div class="input-group d-inline-flex" style="width: auto;">
-                  <input type="number" name="cantidad" class="form-control" value="1" min="1" step="1" required style="width: 70px;">
-                  <button class="btn btn-success" type="submit">🛒</button>
-                </div>
-              </form>
+              <?php $stockCard = (int)$p['stock_actual']; ?>
+              <?php if ($stockCard > 0): ?>
+                <form method="POST" action="carrito.php" class="d-inline">
+                  <input type="hidden" name="id_producto" value="<?= (int)$p['id_producto'] ?>">
+                  <div class="input-group d-inline-flex" style="width: auto;">
+                    <input type="number" name="cantidad" class="form-control" value="1" min="1" max="<?= $stockCard ?>" step="1" required style="width: 70px;">
+                    <button class="btn btn-success" type="submit">🛒</button>
+                  </div>
+                </form>
+              <?php else: ?>
+                <button class="btn btn-secondary" type="button" disabled>Agotado</button>
+              <?php endif; ?>
               <?php if ($id_cliente): ?>
                 <form method="POST" class="d-inline ms-2">
                   <input type="hidden" name="action" value="add_fav">

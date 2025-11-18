@@ -52,11 +52,13 @@
             SELECT p.id_producto, p.nombre_producto, COALESCE(SUM(dp.cantidad), 0) AS total_sold
             FROM DETALLE_PEDIDO dp
             JOIN PRODUCTO p ON dp.id_producto = p.id_producto
+            JOIN PEDIDO pe ON dp.id_pedido = pe.id_pedido
+            WHERE pe.estado = 'completado' $dateFilter
             GROUP BY p.id_producto, p.nombre_producto
             ORDER BY total_sold DESC
             LIMIT 5
         ");
-        $stmt->execute();
+        $stmt->execute($params);
         $topProducts = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         $topProducts = [];

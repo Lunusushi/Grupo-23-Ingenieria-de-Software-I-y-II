@@ -56,21 +56,37 @@ class ClientController {
     }
 
     public static function agregarProducto($conn, $id_carrito, $id_producto, $cantidad) {
+        $cantidad = max(1, (int)$cantidad); // Forzamos unidades enteras
+
+        // Traer info del producto (precio + stock)
+        $prodStmt = $conn->prepare("SELECT precio_unitario, stock_actual FROM PRODUCTO WHERE id_producto = ?");
+        $prodStmt->execute([$id_producto]);
+        $producto = $prodStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$producto) return; // producto inexistente
+
+        $stockDisponible = (int)$producto['stock_actual'];
+        if ($stockDisponible <= 0) return; // sin stock => no agrega
+
+        // Cuánto ya tiene en el carrito
         $check = $conn->prepare("SELECT * FROM ITEM_CARRITO WHERE id_carrito = ? AND id_producto = ?");
         $check->execute([$id_carrito, $id_producto]);
+        $row = $check->fetch(PDO::FETCH_ASSOC);
 
-        if ($row = $check->fetch(PDO::FETCH_ASSOC)) {
-            $nueva = $row["cantidad"] + $cantidad;
+        $yaTiene = $row ? (int)$row['cantidad'] : 0;
+        $maxParaAgregar = $stockDisponible - $yaTiene;
+        if ($maxParaAgregar <= 0) return; // ya alcanzó el stock disponible
+
+        $aAgregar = min($cantidad, $maxParaAgregar);
+        if ($aAgregar <= 0) return;
+
+        if ($row) {
+            $nueva = $yaTiene + $aAgregar;
             $update = $conn->prepare("UPDATE ITEM_CARRITO SET cantidad = ? WHERE id_item_carrito = ?");
             $update->execute([$nueva, $row["id_item_carrito"]]);
         } else {
-            $precio_stmt = $conn->prepare("SELECT precio_unitario FROM PRODUCTO WHERE id_producto = ?");
-            $precio_stmt->execute([$id_producto]);
-            $producto = $precio_stmt->fetch(PDO::FETCH_ASSOC);
-
             $insert = $conn->prepare("INSERT INTO ITEM_CARRITO (id_carrito, id_producto, cantidad, precio_unitario_momento) 
                                       VALUES (?, ?, ?, ?)");
-            $insert->execute([$id_carrito, $id_producto, $cantidad, $producto["precio_unitario"]]);
+            $insert->execute([$id_carrito, $id_producto, $aAgregar, $producto["precio_unitario"]]);
         }
     }
 
@@ -243,8 +259,45 @@ class ClientController {
     }
 
     public static function actualizarEstadoPedido(PDO $conn, int $id_pedido, string $nuevo_estado): void {
-        $stmt = $conn->prepare("UPDATE PEDIDO SET estado = ? WHERE id_pedido = ?");
-        $stmt->execute([$nuevo_estado, $id_pedido]);
+        $conn->beginTransaction();
+        try {
+            // Bloquea el pedido para evitar restituir stock dos veces
+            $stmt = $conn->prepare("SELECT estado FROM PEDIDO WHERE id_pedido = ? FOR UPDATE");
+            $stmt->execute([$id_pedido]);
+            $pedido = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$pedido) {
+                $conn->rollBack();
+                return;
+            }
+
+            $estadoActual = $pedido['estado'];
+            $restaurarStock = ($nuevo_estado === 'cancelado' && $estadoActual === 'pendiente');
+
+            if ($restaurarStock) {
+                // Agrupa cantidades por producto para devolver stock en un solo paso por producto
+                $det = $conn->prepare("
+                    SELECT id_producto, SUM(cantidad) AS total_cantidad
+                    FROM DETALLE_PEDIDO
+                    WHERE id_pedido = ?
+                    GROUP BY id_producto
+                ");
+                $det->execute([$id_pedido]);
+                $items = $det->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($items as $item) {
+                    $conn->prepare("UPDATE PRODUCTO SET stock_actual = stock_actual + ? WHERE id_producto = ?")
+                        ->execute([$item['total_cantidad'], $item['id_producto']]);
+                }
+            }
+
+            $stmt = $conn->prepare("UPDATE PEDIDO SET estado = ? WHERE id_pedido = ?");
+            $stmt->execute([$nuevo_estado, $id_pedido]);
+
+            $conn->commit();
+        } catch (\Throwable $e) {
+            $conn->rollBack();
+            throw $e;
+        }
     }
 
     public static function obtenerPedidosPendientes(PDO $conn): array {
