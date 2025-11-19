@@ -16,20 +16,23 @@
     $end_date = $_GET['end_date'] ?? '';
 
     // Validate and prepare date filters
-    $dateFilter = '';
+    $dateFilterTemplate = '';
     $params = [];
 
     if ($start_date && $end_date) {
-        $dateFilter = "AND p.fecha_pedido BETWEEN ? AND ?";
+        $dateFilterTemplate = "AND %s.fecha_pedido BETWEEN ? AND ?";
         $params[] = $start_date . " 00:00:00";
         $params[] = $end_date . " 23:59:59";
     } elseif ($start_date) {
-        $dateFilter = "AND p.fecha_pedido >= ?";
+        $dateFilterTemplate = "AND %s.fecha_pedido >= ?";
         $params[] = $start_date . " 00:00:00";
     } elseif ($end_date) {
-        $dateFilter = "AND p.fecha_pedido <= ?";
+        $dateFilterTemplate = "AND %s.fecha_pedido <= ?";
         $params[] = $end_date . " 23:59:59";
     }
+
+    $dateFilterPedidos = $dateFilterTemplate ? sprintf($dateFilterTemplate, 'p') : '';
+    $dateFilterDetalles = $dateFilterTemplate ? sprintf($dateFilterTemplate, 'pe') : '';
 
     try {
         $stmt = $conn->prepare("
@@ -38,7 +41,7 @@
                 COALESCE(SUM(dp.subtotal), 0) AS total_revenue
             FROM PEDIDO p
             LEFT JOIN DETALLE_PEDIDO dp ON p.id_pedido = dp.id_pedido
-            WHERE p.estado = 'completado' $dateFilter
+            WHERE p.estado = 'completado' $dateFilterPedidos
         ");
         $stmt->execute($params);
         $salesMetrics = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -53,7 +56,7 @@
             FROM DETALLE_PEDIDO dp
             JOIN PRODUCTO p ON dp.id_producto = p.id_producto
             JOIN PEDIDO pe ON dp.id_pedido = pe.id_pedido
-            WHERE pe.estado = 'completado' $dateFilter
+            WHERE pe.estado = 'completado' $dateFilterDetalles
             GROUP BY p.id_producto, p.nombre_producto
             ORDER BY total_sold DESC
             LIMIT 5
