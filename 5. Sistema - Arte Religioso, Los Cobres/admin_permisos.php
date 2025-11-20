@@ -28,7 +28,7 @@
             if (UserController::puedeAsignarCargo($currentUserCargo, $cargo, $currentUserId, $id_usuario, $targetUserCargo)) {
                 try {
                     UserController::asignarOperador($conn, $id_usuario, $cargo);
-                    header("Location: permisos_admin.php?mensaje=asignado");
+                    header("Location: admin_permisos.php?mensaje=asignado");
                     exit;
                 } catch (Exception $e) {
                     $mensaje = $e->getMessage();
@@ -39,7 +39,7 @@
         } elseif ($action === "revocar" && $cargo) {
             if (UserController::puedeRevocarCargo($currentUserCargo, $cargo, $currentUserId, $id_usuario, $targetUserCargo)) {
                 UserController::revocarCargo($conn, $id_usuario, $cargo);
-                header("Location: permisos_admin.php?mensaje=revocado");
+                header("Location: admin_permisos.php?mensaje=revocado");
                 exit;
             } else {
                 $mensaje = "❌ No tienes permiso para revocar este cargo.";
